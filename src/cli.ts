@@ -13,6 +13,7 @@ import { runSimulation } from "./sim/engine.ts";
 import { readiness, deriveStage } from "./neuro/field.ts";
 import { TOOLS, listTools, toolById } from "./tools/registry.ts";
 import { importContactsFromCsv } from "./tools/csv.ts";
+import { runSelfTest } from "./selftest.ts";
 
 const ROOT = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const DATA = join(ROOT, "data");
@@ -273,6 +274,9 @@ switch (command) {
     break;
   case "proof-video":
     await commandProofVideo();
+    break;
+  case "selftest":
+    process.exitCode = (await runSelfTest()) ? 0 : 1;
     break;
   case "serve":
   default:

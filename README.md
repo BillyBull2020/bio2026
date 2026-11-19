@@ -18,7 +18,7 @@ to say, when to stop, and what it refuses to do. The agent is the smallest part 
 and inbox, presses **Run my day**, and watches booked jobs. The OS shows the revenue at stake,
 the three decision phases, and every action it took.
 
-**New here?** [What Choice OS is for](docs/WHAT-IT-IS.md) · [Start here](START-HERE.md) · [Open the console](http://127.0.0.1:4177)
+**New here?** [What Choice OS is for](docs/WHAT-IT-IS.md) · [What it actually does](docs/CAPABILITIES.md) · [Start here](START-HERE.md) · [Open the console](http://127.0.0.1:4177)
 
 **Repository:** https://github.com/BillyBull2020/bio2026
 
@@ -72,7 +72,12 @@ npm run demo
 npm start
 npm run simulate
 npm test
+npm run selftest
 ```
+
+`npm run selftest` exercises the whole loop without external keys: event chain, CSV consent,
+scheduler, Twilio payload, Resend payload, Cal.diy slots/reservation/booking, holdout and
+Hermes status. It uses local mock servers, so it proves the wiring before you buy anything.
 
 Or Docker (persist the event log with a volume):
 
