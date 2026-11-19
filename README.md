@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/BillyBull2020/bio2026/actions/workflows/ci.yml/badge.svg)](https://github.com/BillyBull2020/bio2026/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/badge/node-24%2B-5FA04E)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/tests-51-61c88f)](tests)
+[![Tests](https://img.shields.io/badge/tests-52-61c88f)](tests)
 [![License](https://img.shields.io/badge/license-source--available-dfa64c)](LICENSE)
 
 **The AI revenue operating system for service businesses.** It answers the phone, works the
@@ -193,7 +193,7 @@ bio2026/
 │   ├── api/          server.ts (JSON + SSE + static console)
 │   └── cli.ts        demo, serve, simulate, seed, verify, reset
 ├── public/           index.html, styles.css, app.js
-├── tests/            51 tests across field, policy, scheduler, kernel, sim, tools, API
+├── tests/            52 tests across field, policy, scheduler, kernel, sim, tools, API
 ├── docs/             architecture, science, migration, results, deployment
 └── data/             events.jsonl (created on first run)
 ```
