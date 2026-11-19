@@ -54,20 +54,22 @@ decisions — and writes plain text. It is **read-only**: it cannot send, change
 job, or write to the event log. That is deliberate; it is the owner's chief of staff, not a
 second decision-maker.
 
-### Go live in five steps
+### Go live in six steps
 
 1. Configure the real business:
    `node src/cli.ts setup-tenant --name "Acme Roofing" --city "Aurora" --state "CO" --owner "Sam" --phone "+13035550100" --ticket 12000`.
 2. Copy `.env.example` and add Twilio + Resend keys, a console password, and
    `CHOICE_PUBLIC_URL`.
-3. Import the real customer list: `node src/cli.ts import-csv --file customers.csv`. Consent
+3. Start Cal.diy and add `CALCOM_BASE_URL`, `CALCOM_API_KEY`, `CALCOM_EVENT_TYPE_ID` so the
+   OS holds real slots. See `docs/CALENDAR.md`.
+4. Import the real customer list: `node src/cli.ts import-csv --file customers.csv`. Consent
    is read per row and never invented.
-4. Point the Twilio number's **A message comes in** webhook at
+5. Point the Twilio number's **A message comes in** webhook at
    `https://your-domain/webhooks/twilio` (POST). Voice status callbacks go to the same URL.
-5. Open **Business** and watch the **Go-live checklist** turn green. The first missing item is
+6. Open **Business** and watch the **Go-live checklist** turn green. The first missing item is
    the next thing to fix.
 
-The checklist is live: Twilio, Resend, customer list, consent, claims, Hermes.
+The checklist is live: Twilio, Resend, calendar, customer list, consent, claims, Hermes.
 
 ---
 

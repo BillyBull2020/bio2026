@@ -16,10 +16,12 @@ import { DIMENSIONS, DIMENSION_META } from "../neuro/types.ts";
 import { llmConfigFromEnv, rewriteMessage } from "../llm/gateway.ts";
 import { deliverAction, deliveryChannels, deliveryConfigFromEnv } from "../tools/delivery.ts";
 import { askHermes, hermesStatus, type OpsSnapshot } from "../tools/hermes.ts";
+import { calendarConfigFromEnv, getAvailableSlots, slotFacts, type CalendarConfig, type SlotFacts } from "../tools/calendar.ts";
 
 const ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
 const PUBLIC = join(ROOT, "public");
 const DATA = join(ROOT, "data");
+const CALENDAR = calendarConfigFromEnv();
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -100,6 +102,20 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
   const conductor = new Conductor(store, SEED_CLAIMS, DEFAULT_SETTINGS);
   const startedAt = Date.now();
   let lastSim: unknown = null;
+  let calendarCache: { at: number; facts: SlotFacts | null } | null = null;
+
+  async function currentCalendarFacts(): Promise<SlotFacts | undefined> {
+    if (!CALENDAR) return undefined;
+    if (calendarCache && Date.now() - calendarCache.at < 300_000) return calendarCache.facts ?? undefined;
+    try {
+      const facts = await slotFacts(CALENDAR, new Date().toISOString());
+      calendarCache = { at: Date.now(), facts };
+      return facts ?? undefined;
+    } catch {
+      calendarCache = { at: Date.now(), facts: null };
+      return undefined;
+    }
+  }
 
   const server = createServer(async (req, res) => {
     const method = req.method ?? "GET";
@@ -116,6 +132,13 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
         return;
       }
     }
+
+    const needsCalendar =
+      path === "/api/business" ||
+      path.startsWith("/api/contacts/") ||
+      path === "/api/tick" ||
+      path === "/api/run-day";
+    if (needsCalendar) conductor.setFacts(await currentCalendarFacts());
 
     try {
       if (method === "OPTIONS") {
@@ -555,6 +578,20 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
         return;
       }
 
+      if (path === "/api/calendar/slots") {
+        if (!CALENDAR) {
+          send(res, 400, { ok: false, error: "Cal.diy is not configured. Set CALCOM_BASE_URL, CALCOM_API_KEY and CALCOM_EVENT_TYPE_ID." });
+          return;
+        }
+        try {
+          const slots = await getAvailableSlots(CALENDAR, new Date().toISOString());
+          send(res, 200, { ok: true, configured: true, slots: slots.slice(0, 20) });
+        } catch (error) {
+          send(res, 502, { ok: false, configured: true, error: error instanceof Error ? error.message : "Cal.diy slots failed" });
+        }
+        return;
+      }
+
       if (path === "/api/setup/status") {
         const channels = deliveryChannels();
         const contacts = store.contacts();
@@ -564,13 +601,14 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
         const checklist = [
           { id: "twilio", label: "Twilio SMS", ready: channels.sms, detail: channels.sms ? "Configured" : "Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM" },
           { id: "resend", label: "Resend email", ready: channels.email, detail: channels.email ? "Configured" : "Add RESEND_API_KEY and RESEND_FROM" },
+          { id: "calendar", label: "Calendar holds", ready: Boolean(CALENDAR), detail: CALENDAR ? `${CALENDAR.baseUrl} · event ${CALENDAR.eventTypeId}` : "Add CALCOM_BASE_URL, CALCOM_API_KEY, CALCOM_EVENT_TYPE_ID" },
           { id: "contacts", label: "Customer list", ready: contacts.length > 0, detail: `${contacts.length} contacts` },
           { id: "consent", label: "Consent records", ready: consented > 0, detail: `${consented} contacts with consent` },
           { id: "claims", label: "Claim registry", ready: claims > 0, detail: `${claims} claims` },
           { id: "hermes", label: "Hermes ops analyst", ready: hermes.available, detail: hermes.available ? `${hermes.model} · ${hermes.provider}` : "Install Hermes" },
         ];
         send(res, 200, {
-          channels: { ...channels, calendar: Boolean(process.env.CALENDAR_WEBHOOK_URL) },
+          channels: { ...channels, calendar: Boolean(CALENDAR) },
           counts: { contacts: contacts.length, consented, claims, actions: store.state.actions.length, bookings: store.state.bookings.length },
           hermes,
           publicUrl: process.env.CHOICE_PUBLIC_URL ?? "http://127.0.0.1:4177",

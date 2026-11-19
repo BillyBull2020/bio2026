@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/BillyBull2020/bio2026/actions/workflows/ci.yml/badge.svg)](https://github.com/BillyBull2020/bio2026/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/badge/node-24%2B-5FA04E)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/tests-67-61c88f)](tests)
+[![Tests](https://img.shields.io/badge/tests-70-61c88f)](tests)
 [![License](https://img.shields.io/badge/license-source--available-dfa64c)](LICENSE)
 
 **The AI revenue operating system for service businesses.** It answers the phone, works the
@@ -193,7 +193,7 @@ bio2026/
 │   ├── api/          server.ts (JSON + SSE + static console)
 │   └── cli.ts        demo, serve, simulate, seed, verify, reset
 ├── public/           index.html, styles.css, app.js
-├── tests/            67 tests across field, policy, scheduler, kernel, sim, tools, Hermes, API
+├── tests/            70 tests across field, policy, scheduler, kernel, sim, tools, Hermes, API
 ├── docs/             architecture, science, migration, results, deployment
 └── data/             events.jsonl (created on first run)
 ```
@@ -319,7 +319,12 @@ and `consent_source`. Rows without consent are imported with a zero pressure bud
 `needs_consent`; the scheduler waits.
 
 The console's **Go-live checklist** reads `/api/setup/status` and shows exactly what is still
-missing: Twilio, Resend, contacts, consent, claims, Hermes.
+missing: Twilio, Resend, calendar, contacts, consent, claims, Hermes.
+
+For real calendar holds, run Cal.diy and set `CALCOM_BASE_URL`, `CALCOM_API_KEY` and
+`CALCOM_EVENT_TYPE_ID`. The OS reads real availability, puts the real deadline on the
+`calendar_hold` move, and can reserve or book through the Cal.com v2 API. Full setup:
+[`docs/CALENDAR.md`](docs/CALENDAR.md).
 
 For a real pilot, set `CHOICE_HOLDOUT_PCT=0.15` before starting. 15% of marketing-eligible
 contacts receive no outbound, and `GET /api/experiment` reports bookings, revenue, messages and
@@ -331,9 +336,10 @@ opt-outs by arm. The split is a deterministic hash, so it survives restarts and 
 
 - **The simulation is synthetic.** It is a decision aid, not evidence. The pilot design in
   `docs/RESULTS.md` is the evidence.
-- **Twilio SMS, Resend email and a generic webhook ship as delivery adapters.** Calendar
-  holds, inbound email and CRM sync are not connected yet; `calendar_hold` stays blocked
-  without real slots. The kernel still owns the policy gate.
+- **Twilio SMS, Resend email and a generic webhook ship as delivery adapters.** Cal.diy /
+  Cal.com calendar holds, reservations and bookings are connected through the v2 API. Inbound
+  email and CRM sync are not connected yet; a real pilot must configure Cal.diy, otherwise the
+  deterministic demo slots are used. The kernel still owns the policy gate.
 - **No LLM is required.** Copy is deterministic and claim-bound. A model can be added as a
   rewriter, but it cannot add numbers, deadlines or guarantees. That is a feature.
 - **State is a JSONL event log + in-memory index.** Fine for a single tenant and tens of

@@ -5,6 +5,7 @@ import type {
   Contact,
   Decision,
   KernelSettings,
+  RenderFacts,
   SignalType,
 } from "../neuro/types.ts";
 import { readiness } from "../neuro/field.ts";
@@ -65,11 +66,17 @@ export class Conductor {
   store: KernelStore;
   claims: Claim[];
   settings: KernelSettings;
+  facts?: Partial<RenderFacts>;
 
   constructor(store: KernelStore, claims: Claim[], settings: KernelSettings) {
     this.store = store;
     this.claims = claims;
     this.settings = settings;
+  }
+
+  /** The server refreshes real calendar slots once per request; every nested plan sees them. */
+  setFacts(facts?: Partial<RenderFacts>): void {
+    this.facts = facts;
   }
 
   planFor(contactId: string, now: string, options: { roleId?: string; channel?: Channel; initiatedBy?: "system" | "human" | "inbound" } = {}): PlanResult | null {
@@ -89,6 +96,7 @@ export class Conductor {
       roleId: options.roleId,
       channel: options.channel,
       initiatedBy: options.initiatedBy,
+      facts: this.facts,
     });
   }
 

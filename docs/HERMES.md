@@ -68,20 +68,28 @@ The result is a reliable analyst, not an unpredictable operator.
 | Variable | Default | Notes |
 |---|---|---|
 | `HERMES_BIN` | `C:\Users\billy\AppData\Local\hermes\bin\hermes.exe` | Absolute path to the CLI |
-| `HERMES_PROVIDER` | `google` | Provider configured in Hermes |
-| `HERMES_MODEL` | `gemini-3.8-flash` | Model that answers |
+| `HERMES_PROVIDER` | `openrouter` | Free model route |
+| `HERMES_MODEL` | `meta-llama/llama-3.3-70b-instruct:free` | A `:free` model id |
+| `HERMES_FALLBACK_PROVIDER` | `ollama` | Local fallback |
+| `HERMES_FALLBACK_MODEL` | `nemotron-3.5-lightning:30b-a3b` | Installed Ollama model |
+
+No paid API is required. The primary route is a free OpenRouter model; if it is unavailable,
+the client retries the local Ollama model. A model is only accepted if it is free; do not put a
+paid model in `HERMES_MODEL`.
 
 Change the model without touching code:
 
 ```powershell
-$env:HERMES_MODEL="gemini-3.8-flash"
-$env:HERMES_PROVIDER="google"
+$env:HERMES_PROVIDER="openrouter"
+$env:HERMES_MODEL="meta-llama/llama-3.3-70b-instruct:free"
+$env:HERMES_FALLBACK_PROVIDER="ollama"
+$env:HERMES_FALLBACK_MODEL="nemotron-3.5-lightning:30b-a3b"
 node src/cli.ts serve --host 0.0.0.0 --port 4177
 ```
 
-Hermes must be installed and authenticated separately (`hermes status`, `hermes setup`). The
-OS degrades gracefully if it is missing: the console shows **not installed** and the rest of
-the system works.
+Hermes must be installed and authenticated separately (`hermes status`, `hermes setup`).
+Ollama must be running with the fallback model pulled. The OS degrades gracefully if both are
+missing: the console shows **not installed** and the rest of the system works.
 
 ## API
 
@@ -96,8 +104,8 @@ Response:
 {
   "ok": true,
   "text": "...",
-  "model": "gemini-3.8-flash",
-  "provider": "google",
+  "model": "meta-llama/llama-3.3-70b-instruct:free",
+  "provider": "openrouter",
   "durationMs": 8421
 }
 ```

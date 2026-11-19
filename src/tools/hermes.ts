@@ -36,6 +36,7 @@ export interface HermesStatus {
   bin: string;
   provider: string;
   model: string;
+  fallback?: { provider: string; model: string };
 }
 
 export interface HermesAnswer {
@@ -48,8 +49,10 @@ export interface HermesAnswer {
 }
 
 const DEFAULT_BIN = process.env.HERMES_BIN ?? "C:\\Users\\billy\\AppData\\Local\\hermes\\bin\\hermes.exe";
-const DEFAULT_PROVIDER = process.env.HERMES_PROVIDER ?? "google";
-const DEFAULT_MODEL = process.env.HERMES_MODEL ?? "gemini-3.8-flash";
+const DEFAULT_PROVIDER = process.env.HERMES_PROVIDER ?? "openrouter";
+const DEFAULT_MODEL = process.env.HERMES_MODEL ?? "meta-llama/llama-3.3-70b-instruct:free";
+const FALLBACK_PROVIDER = process.env.HERMES_FALLBACK_PROVIDER ?? "ollama";
+const FALLBACK_MODEL = process.env.HERMES_FALLBACK_MODEL ?? "nemotron-3.5-lightning:30b-a3b";
 
 export function hermesStatus(): HermesStatus {
   return {
@@ -57,6 +60,9 @@ export function hermesStatus(): HermesStatus {
     bin: DEFAULT_BIN,
     provider: DEFAULT_PROVIDER,
     model: DEFAULT_MODEL,
+    ...(process.env.HERMES_NO_FALLBACK === "1"
+      ? {}
+      : { fallback: { provider: FALLBACK_PROVIDER, model: FALLBACK_MODEL } }),
   };
 }
 
@@ -88,25 +94,16 @@ export function cleanHermesOutput(raw: string): string {
     .trim();
 }
 
-export async function askHermes(
-  snapshot: OpsSnapshot,
-  question: string,
-  options: { timeoutMs?: number; bin?: string; provider?: string; model?: string } = {},
+async function runHermesOnce(
+  bin: string,
+  prompt: string,
+  provider: string,
+  model: string,
+  timeoutMs: number,
+  started: number,
 ): Promise<HermesAnswer> {
-  const status = hermesStatus();
-  const bin = options.bin ?? status.bin;
-  const provider = options.provider ?? status.provider;
-  const model = options.model ?? status.model;
-  const started = Date.now();
-
-  if (!existsSync(bin) && bin !== "hermes") {
-    return { ok: false, text: "", model, provider, durationMs: 0, error: "Hermes is not installed at the configured path." };
-  }
-
   const workspace = join(process.cwd(), "data", "hermes");
   await mkdir(workspace, { recursive: true });
-
-  const prompt = buildOpsPrompt(snapshot, question);
   const args = [
     "chat",
     "-q",
@@ -126,7 +123,7 @@ export async function askHermes(
   try {
     const { stdout } = await execFileAsync(bin, args, {
       cwd: workspace,
-      timeout: options.timeoutMs ?? 90_000,
+      timeout: timeoutMs,
       maxBuffer: 2_000_000,
       windowsHide: true,
       env: { ...process.env, HERMES_NO_UPDATE_CHECK: "1" },
@@ -140,7 +137,14 @@ export async function askHermes(
     }
     return { ok: true, text, model, provider, durationMs: Date.now() - started };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    // Hermes exits 1 on some local-provider paths even when it printed a valid answer
+    // (Ollama does this). Keep the usable stdout, reject tracebacks and provider failures.
+    const details = error as { stdout?: string; stderr?: string; killed?: boolean; message?: string };
+    const out = cleanHermesOutput(String(details.stdout ?? ""));
+    if (out && !/No reply: every provider|Provider said|temporarily unavailable|Traceback|Error:/i.test(out)) {
+      return { ok: true, text: out, model, provider, durationMs: Date.now() - started };
+    }
+    const message = details.message ?? String(error);
     return {
       ok: false,
       text: "",
@@ -150,4 +154,46 @@ export async function askHermes(
       error: /timed out|killed/i.test(message) ? "Hermes timed out. Try a shorter question." : message.slice(0, 300),
     };
   }
+}
+
+export async function askHermes(
+  snapshot: OpsSnapshot,
+  question: string,
+  options: {
+    timeoutMs?: number;
+    bin?: string;
+    provider?: string;
+    model?: string;
+    fallback?: { provider: string; model: string } | false;
+  } = {},
+): Promise<HermesAnswer> {
+  const status = hermesStatus();
+  const bin = options.bin ?? status.bin;
+  const provider = options.provider ?? status.provider;
+  const model = options.model ?? status.model;
+  const started = Date.now();
+
+  if (!existsSync(bin) && bin !== "hermes") {
+    return { ok: false, text: "", model, provider, durationMs: 0, error: "Hermes is not installed at the configured path." };
+  }
+
+  const attempts = [{ provider, model }];
+  const fallback = options.fallback === false ? undefined : (options.fallback ?? status.fallback);
+  if (fallback && (fallback.provider !== provider || fallback.model !== model)) attempts.push(fallback);
+
+  const prompt = buildOpsPrompt(snapshot, question);
+  let last: HermesAnswer | null = null;
+  for (const attempt of attempts) {
+    const result = await runHermesOnce(bin, prompt, attempt.provider, attempt.model, options.timeoutMs ?? 90_000, started);
+    if (result.ok) return result;
+    last = result;
+  }
+  return last ?? {
+    ok: false,
+    text: "",
+    model,
+    provider,
+    durationMs: Date.now() - started,
+    error: "Hermes has no configured model.",
+  };
 }

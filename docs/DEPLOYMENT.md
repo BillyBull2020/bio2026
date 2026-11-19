@@ -129,31 +129,25 @@ as `missed_call`, which feeds the **Stop the bleeding** phase.
 `CHOICE_PUBLIC_URL` must be the exact public origin Twilio signs. If it is wrong, valid
 webhooks return `403`.
 
-### Calendar
+### Calendar (Cal.diy / Cal.com)
 
-`calendar_hold` requires a real deadline. The adapter should create two actual holds before
-the kernel is allowed to offer them:
+`src/tools/calendar.ts` talks to the Cal.com v2 API, which Cal.diy implements. Set:
 
-```ts
-const holds = await calendar.holdTwoSlots(contact.timezone, now);
-conductor.dispatch(contactId, now, { facts: { slotA: holds.a, slotB: holds.b } });
+```bash
+CALCOM_BASE_URL=http://localhost:3000
+CALCOM_API_KEY=cal_live_...
+CALCOM_EVENT_TYPE_ID=123
+CALCOM_TIMEZONE=America/Denver
 ```
 
-If the calendar is unavailable, the move is blocked by `unreal_deadline`. That is the correct
-failure. Calendar is not connected in the pilot yet; **do not promise a hold** until it is.
+The server caches real availability for five minutes and passes it to
+`Conductor.setFacts({ slotA, slotB, deadline })`. The scheduler uses the real deadline for
+`calendar_hold`, so `unreal_deadline` is backed by an actual slot. `reserveSlot` and
+`createBooking` are implemented for the confirmation path.
 
-### Calendar
-
-`calendar_hold` requires a real deadline. The adapter should create two actual holds before
-the kernel is allowed to offer them:
-
-```ts
-const holds = await calendar.holdTwoSlots(contact.timezone, now);
-conductor.dispatch(contactId, now, { facts: { slotA: holds.a, slotB: holds.b } });
-```
-
-If the calendar is unavailable, the move is blocked by `unreal_deadline`. That is the
-correct failure.
+If no Cal.diy is configured, the scheduler uses its deterministic demo slots. That is fine for
+a demo and unacceptable for a real send. For a real pilot, configure Cal.diy first; see
+[`CALENDAR.md`](CALENDAR.md).
 
 ---
 
@@ -177,10 +171,18 @@ RESEND_API_KEY=...
 RESEND_FROM="Your Company <hello@yourdomain.com>"
 CHOICE_PUBLIC_URL=https://os.yourdomain.com
 
-# optional: Hermes read-only ops analyst
+# Cal.diy / Cal.com v2 calendar
+CALCOM_BASE_URL=http://localhost:3000
+CALCOM_API_KEY=
+CALCOM_EVENT_TYPE_ID=
+CALCOM_TIMEZONE=America/Denver
+
+# optional: Hermes read-only ops analyst (free model + local fallback)
 HERMES_BIN=C:\Users\you\AppData\Local\hermes\bin\hermes.exe
-HERMES_PROVIDER=google
-HERMES_MODEL=gemini-3.8-flash
+HERMES_PROVIDER=openrouter
+HERMES_MODEL=meta-llama/llama-3.3-70b-instruct:free
+HERMES_FALLBACK_PROVIDER=ollama
+HERMES_FALLBACK_MODEL=nemotron-3.5-lightning:30b-a3b
 
 # optional console protection (Basic Auth). Set both to enable.
 CHOICE_CONSOLE_USER=billy

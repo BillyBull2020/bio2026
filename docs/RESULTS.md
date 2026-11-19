@@ -161,7 +161,7 @@ catalogue are wrong; do not scale.
 ## Reproduce
 
 ```bash
-# full test suite (67 tests)
+# full test suite (70 tests)
 npm test
 
 # deterministic simulation

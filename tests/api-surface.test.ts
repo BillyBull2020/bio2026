@@ -28,9 +28,11 @@ test("every JSON endpoint answers on a fresh kernel", async () => {
     await json(await fetch(`${base}/api/metrics`));
     await json(await fetch(`${base}/api/events?limit=5`));
     const setup = await json(await fetch(`${base}/api/setup/status`));
-    assert.equal(setup.checklist.length, 6);
+    assert.equal(setup.checklist.length, 7);
     assert.equal(typeof setup.channels.sms, "boolean");
     assert.equal(setup.counts.contacts, 16);
+    const calendar = await fetch(`${base}/api/calendar/slots`);
+    assert.equal(calendar.status, 400);
     const experiment = await json(await fetch(`${base}/api/experiment`));
     assert.equal(experiment.treatment.contacts + experiment.holdout.contacts, 14);
 

@@ -261,7 +261,7 @@ export function plan(input: PlanInput): PlanResult {
       company: tenant.name,
     }, facts);
 
-    const realDeadline = move.id === "calendar_hold" ? slots(now, contact.timezone).deadline : undefined;
+    const realDeadline = move.id === "calendar_hold" ? (facts.deadline ?? slots(now, contact.timezone).deadline) : undefined;
     const verdict = evaluatePolicy({
       contact: { ...contact, field },
       now,

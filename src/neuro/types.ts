@@ -368,6 +368,7 @@ export interface RenderFacts {
   proof?: { name: string; city: string; result: string; action: string };
   slotA?: string;
   slotB?: string;
+  deadline?: string;
   humanName?: string;
   humanPhone?: string;
   reviewLink?: string;
