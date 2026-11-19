@@ -14,6 +14,7 @@ import { readiness, deriveStage } from "./neuro/field.ts";
 import { TOOLS, listTools, toolById } from "./tools/registry.ts";
 import { importContactsFromCsv } from "./tools/csv.ts";
 import { runSelfTest } from "./selftest.ts";
+import { addMedia } from "./tools/media.ts";
 
 const ROOT = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const DATA = join(ROOT, "data");
@@ -63,6 +64,25 @@ async function commandSetupTenant(): Promise<void> {
   console.log(`  trade: ${tenant.trade} · avg ticket: $${tenant.avgTicket.toLocaleString()} · owner: ${tenant.ownerName}`);
   console.log(`  written: ${join(DATA, "tenant.json")}`);
   console.log(`\nNext: node src/cli.ts import-csv --file customers.csv\n`);
+}
+
+async function commandMediaAdd(): Promise<void> {
+  const file = flag("file");
+  if (!file) {
+    console.error("Usage: node src/cli.ts media-add --file path/to/image.png");
+    process.exitCode = 1;
+    return;
+  }
+  try {
+    const media = await addMedia(file);
+    console.log(`\nMedia added: ${media.filename}`);
+    console.log(`  bytes: ${media.bytes.toLocaleString()}`);
+    console.log(`  public URL: ${media.url}`);
+    console.log(`\nPaste that URL into the Operator social task.\n`);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  }
 }
 
 async function commandDemo(): Promise<void> {
@@ -277,6 +297,9 @@ switch (command) {
     break;
   case "selftest":
     process.exitCode = (await runSelfTest()) ? 0 : 1;
+    break;
+  case "media-add":
+    await commandMediaAdd();
     break;
   case "serve":
   default:

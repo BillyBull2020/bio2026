@@ -31,6 +31,12 @@ export interface OperatorTask {
     to?: string;
     subject?: string;
     platforms?: string[];
+    imageUrl?: string;
+    videoUrl?: string;
+    thumbnailUrl?: string;
+    altText?: string;
+    scheduledAt?: string;
+    channelIds?: string[];
     approvedAt?: string;
     deliveredAt?: string;
     deliveryId?: string;

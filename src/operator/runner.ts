@@ -41,6 +41,11 @@ function buildPrompt(task: OperatorTask, tenant: Tenant): string {
     ...(task.meta.to ? [`RECIPIENT: ${task.meta.to}`] : []),
     ...(task.meta.subject ? [`SUBJECT: ${task.meta.subject}`] : []),
     ...(task.meta.platforms?.length ? [`PLATFORMS: ${task.meta.platforms.join(", ")}`] : []),
+    ...(task.meta.imageUrl ? [`IMAGE URL: ${task.meta.imageUrl}`] : []),
+    ...(task.meta.videoUrl ? [`VIDEO URL: ${task.meta.videoUrl}`] : []),
+    ...(task.meta.thumbnailUrl ? [`THUMBNAIL URL: ${task.meta.thumbnailUrl}`] : []),
+    ...(task.meta.altText ? [`ALT TEXT: ${task.meta.altText}`] : []),
+    ...(task.meta.scheduledAt ? [`SCHEDULED AT: ${task.meta.scheduledAt}`] : []),
     ...(task.type === "send_email"
       ? [
           "Return only the email body. Do not include To, From, Subject, or a claim that it was sent.",

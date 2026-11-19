@@ -13,8 +13,10 @@ Nothing is faked: if a provider is absent, the endpoint returns `skipped` or **4
 | **Resend email** | `src/tools/delivery.ts` | API key, verified from address | One email to your inbox |
 | **Cal.diy / Cal.com** | `src/tools/calendar.ts` | Base URL, API key, event type ID | `GET /api/calendar/slots` |
 | **Stripe** | `src/tools/stripe.ts` | Secret key + recurring price ID | `POST /api/billing/checkout` |
-| **Social publish** | `src/tools/social.ts` | `SOCIAL_WEBHOOK_URL` (n8n, Make, Postiz, Buffer) | Approve a `social_publish` task |
+| **Social publish** | `src/tools/buffer.ts` / `social.ts` | Buffer API key + channel IDs, or `SOCIAL_WEBHOOK_URL` | Approve a `social_publish` task |
+| **Media URLs** | `src/tools/media.ts` | A public `CHOICE_PUBLIC_URL` | `npm run media-add -- --file image.png` |
 | **CRM sync** | `src/tools/crm.ts` | `CRM_WEBHOOK_URL` (n8n, Make, Zapier, Airtable Automations) | `POST /api/crm/sync` |
+| **Monday CRM** | Hermes MCP | Accept your invite, then `hermes mcp install monday` + OAuth | `hermes mcp list` |
 | **Hermes operator** | `src/operator/` | Hermes + Ollama/OpenRouter | `GET /api/operator/status` |
 | **Hermes MCPs** | Hermes config | OAuth/keys per server | `hermes mcp list` |
 
@@ -44,6 +46,11 @@ STRIPE_SECRET_KEY=
 STRIPE_PRICE_ID=
 
 # Social scheduler
+BUFFER_API_KEY=
+BUFFER_ORGANIZATION_ID=
+BUFFER_CHANNEL_IDS=
+BUFFER_SHARE_MODE=addToQueue
+# or:
 SOCIAL_WEBHOOK_URL=
 SOCIAL_WEBHOOK_TOKEN=
 
@@ -61,18 +68,40 @@ OPERATOR_MODEL=qwen/qwen3-235b-a22b:free
 
 ## Social, specifically
 
-The OS does not hold X/LinkedIn/Meta credentials. It sends an approved post to a webhook:
+The OS prefers **Buffer native** when `BUFFER_API_KEY` is set. It uses the same GraphQL
+`createPost` mutation as Buffer's official n8n node, including image and video assets:
 
 ```json
 {
   "text": "The post text.",
-  "platforms": ["facebook", "instagram"],
-  "approved": true
+  "assets": [{ "video": { "url": "https://.../roof.mp4", "thumbnailUrl": "https://.../roof.jpg" } }]
 }
 ```
 
-Point it at n8n/Make/Postiz/Buffer. That is the safe way to publish: platform credentials stay
-in the scheduler, not in a model or a public repo.
+Set `BUFFER_CHANNEL_IDS` to the comma-separated channel IDs (from Buffer's channel list). If
+Buffer is not configured, an approved post goes to `SOCIAL_WEBHOOK_URL` (n8n/Make/Postiz).
+
+### Images and videos
+
+Buffer and social platforms need a public URL, not a local file. Put the generated asset on the
+public media route:
+
+```powershell
+npm run media-add -- --file .\renders\roof.mp4
+```
+
+It returns an unguessable URL such as:
+
+```text
+https://biodynamx-1.tail897ca3.ts.net:8443/media/<32-hex>.mp4
+```
+
+Paste that into the Operator **Publish social** task. The route serves `data/media` without
+Basic Auth, with an unguessable token and an immutable cache header. Supported: jpg, png, webp,
+gif, mp4, mov, webm.
+
+This is how you connect the local video/image repos: render the asset, `media-add`, then attach
+it to the approved Buffer post.
 
 ## CRM, specifically
 
@@ -101,11 +130,24 @@ POST /api/billing/checkout
 It returns a Stripe-hosted URL. No card data touches the OS. If `STRIPE_SECRET_KEY` or
 `STRIPE_PRICE_ID` is missing, the endpoint returns **400**.
 
+## Monday
+
+I did **not** use the invitation token. An invite link is a one-time credential; accept it
+yourself, then connect Monday as an MCP server:
+
+```powershell
+hermes mcp install monday
+```
+
+Hermes will open the OAuth flow. Once connected, the Operator can read boards and items and,
+after approval, create or update records. Do not paste the invitation token into a repo, a
+prompt, or this console.
+
 ## Test order
 
-1. `npm test` — 77 tests.
+1. `npm test` — 80 tests.
 2. `npm run selftest` — 11 end-to-end checks with mock providers.
-3. `GET /api/setup/status` — nine-item go-live checklist.
+3. `GET /api/setup/status` — ten-item go-live checklist.
 4. One real SMS to your phone; reply STOP.
 5. One real email to your inbox.
 6. One Cal.diy slot, reservation and booking.

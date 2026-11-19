@@ -2,6 +2,8 @@ node_modules/
 data/events.jsonl
 data/proofs/
 data/snapshot.json
+data/media/
+data/operator/
 *.log
 server.out.log
 server.err.log

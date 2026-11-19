@@ -36,6 +36,12 @@ export async function createOperatorTask(input: {
   to?: string;
   subject?: string;
   platforms?: string[];
+  imageUrl?: string;
+  videoUrl?: string;
+  thumbnailUrl?: string;
+  altText?: string;
+  scheduledAt?: string;
+  channelIds?: string[];
 }): Promise<OperatorTask> {
   const now = new Date().toISOString();
   const task: OperatorTask = {
@@ -49,6 +55,12 @@ export async function createOperatorTask(input: {
       ...(input.to ? { to: input.to } : {}),
       ...(input.subject ? { subject: input.subject } : {}),
       ...(input.platforms?.length ? { platforms: input.platforms } : {}),
+      ...(input.imageUrl ? { imageUrl: input.imageUrl } : {}),
+      ...(input.videoUrl ? { videoUrl: input.videoUrl } : {}),
+      ...(input.thumbnailUrl ? { thumbnailUrl: input.thumbnailUrl } : {}),
+      ...(input.altText ? { altText: input.altText } : {}),
+      ...(input.scheduledAt ? { scheduledAt: input.scheduledAt } : {}),
+      ...(input.channelIds?.length ? { channelIds: input.channelIds } : {}),
     },
   };
   const tasks = await load();

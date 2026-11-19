@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { createReadStream } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { extname, join, normalize, resolve } from "node:path";
@@ -18,8 +19,10 @@ import { deliverAction, deliveryChannels, deliveryConfigFromEnv, sendEmailMessag
 import { askHermes, hermesStatus, type OpsSnapshot } from "../tools/hermes.ts";
 import { calendarConfigFromEnv, getAvailableSlots, slotFacts, type CalendarConfig, type SlotFacts } from "../tools/calendar.ts";
 import { publishSocial, socialConfigFromEnv } from "../tools/social.ts";
+import { bufferConfigFromEnv, listBufferChannels } from "../tools/buffer.ts";
 import { createCheckoutSession, stripeConfigFromEnv } from "../tools/stripe.ts";
 import { crmConfigFromEnv, syncBook } from "../tools/crm.ts";
+import { MEDIA_DIR, isMediaFilename, mediaContentType } from "../tools/media.ts";
 import { createOperatorTask, getOperatorTask, listOperatorTasks, updateOperatorTask } from "../operator/store.ts";
 import { OPERATOR_TYPES, runOperatorTask } from "../operator/runner.ts";
 
@@ -29,6 +32,7 @@ const DATA = join(ROOT, "data");
 const CALENDAR = calendarConfigFromEnv();
 const STRIPE = stripeConfigFromEnv();
 const CRM = crmConfigFromEnv();
+const BUFFER = bufferConfigFromEnv();
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -131,7 +135,7 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
 
     const authUser = process.env.CHOICE_CONSOLE_USER;
     const authPass = process.env.CHOICE_CONSOLE_PASS;
-    if (authUser && authPass && path !== "/api/health" && !path.startsWith("/webhooks/")) {
+    if (authUser && authPass && path !== "/api/health" && !path.startsWith("/webhooks/") && !path.startsWith("/media/")) {
       const expected = `Basic ${Buffer.from(`${authUser}:${authPass}`).toString("base64")}`;
       if (req.headers.authorization !== expected) {
         res.writeHead(401, { "www-authenticate": 'Basic realm="BioDynamX Choice OS"' });
@@ -146,6 +150,29 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
       path === "/api/tick" ||
       path === "/api/run-day";
     if (needsCalendar) conductor.setFacts(await currentCalendarFacts());
+
+    if (path.startsWith("/media/")) {
+      const name = decodeURIComponent(path.slice("/media/".length));
+      if (!isMediaFilename(name)) {
+        res.writeHead(404, { "content-type": "text/plain" });
+        res.end("Not found");
+        return;
+      }
+      const full = join(MEDIA_DIR, name);
+      try {
+        await stat(full);
+        res.writeHead(200, {
+          "content-type": mediaContentType(name),
+          "cache-control": "public, max-age=31536000, immutable",
+          "access-control-allow-origin": "*",
+        });
+        createReadStream(full).pipe(res);
+      } catch {
+        res.writeHead(404, { "content-type": "text/plain" });
+        res.end("Not found");
+      }
+      return;
+    }
 
     try {
       if (method === "OPTIONS") {
@@ -616,6 +643,30 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
         return;
       }
 
+      if (path === "/api/social/status") {
+        const webhook = socialConfigFromEnv();
+        send(res, 200, {
+          buffer: Boolean(BUFFER),
+          bufferChannels: BUFFER?.channelIds.length ?? 0,
+          bufferOrganization: Boolean(BUFFER?.organizationId),
+          webhook: Boolean(webhook.url),
+        });
+        return;
+      }
+
+      if (path === "/api/social/channels") {
+        if (!BUFFER) {
+          send(res, 400, { error: "Buffer is not configured. Set BUFFER_API_KEY and BUFFER_ORGANIZATION_ID." });
+          return;
+        }
+        try {
+          send(res, 200, { channels: await listBufferChannels(BUFFER) });
+        } catch (error) {
+          send(res, 502, { error: error instanceof Error ? error.message : "Buffer channel lookup failed" });
+        }
+        return;
+      }
+
       if (path === "/api/billing/status") {
         send(res, 200, {
           configured: Boolean(STRIPE),
@@ -670,6 +721,7 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
           { id: "claims", label: "Claim registry", ready: claims > 0, detail: `${claims} claims` },
           { id: "billing", label: "Stripe billing", ready: Boolean(STRIPE), detail: STRIPE ? `Price ${STRIPE.priceId}` : "Add STRIPE_SECRET_KEY and STRIPE_PRICE_ID" },
           { id: "crm", label: "CRM sync", ready: Boolean(CRM.url), detail: CRM.url ? "Webhook configured" : "Add CRM_WEBHOOK_URL" },
+          { id: "social", label: "Buffer social", ready: Boolean(BUFFER) || Boolean(socialConfigFromEnv().url), detail: BUFFER ? `${BUFFER.channelIds.length} channel(s)` : "Add BUFFER_API_KEY + BUFFER_CHANNEL_IDS, or SOCIAL_WEBHOOK_URL" },
           { id: "hermes", label: "Hermes ops analyst", ready: hermes.available, detail: hermes.available ? `${hermes.model} · ${hermes.provider}` : "Install Hermes" },
         ];
         send(res, 200, {
@@ -791,6 +843,12 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
           to: body.to ? String(body.to) : undefined,
           subject: body.subject ? String(body.subject) : undefined,
           platforms: Array.isArray(body.platforms) ? body.platforms.map(String) : undefined,
+          imageUrl: body.imageUrl ? String(body.imageUrl) : undefined,
+          videoUrl: body.videoUrl ? String(body.videoUrl) : undefined,
+          thumbnailUrl: body.thumbnailUrl ? String(body.thumbnailUrl) : undefined,
+          altText: body.altText ? String(body.altText) : undefined,
+          scheduledAt: body.scheduledAt ? String(body.scheduledAt) : undefined,
+          channelIds: Array.isArray(body.channelIds) ? body.channelIds.map(String) : undefined,
         });
         void runOperatorTask(task, store.state.tenant).catch(async (error) => {
           await updateOperatorTask(task.id, {
@@ -868,6 +926,12 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
             const result = await publishSocial(social, {
               text: task.output,
               platforms: task.meta.platforms ?? ["facebook", "instagram"],
+              imageUrl: task.meta.imageUrl,
+              videoUrl: task.meta.videoUrl,
+              thumbnailUrl: task.meta.thumbnailUrl,
+              altText: task.meta.altText,
+              scheduledAt: task.meta.scheduledAt,
+              channelIds: task.meta.channelIds,
             });
             if (!result.ok) {
               send(res, 502, { error: result.error ?? "social publish failed", task });

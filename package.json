@@ -17,6 +17,7 @@
     "import-csv": "node src/cli.ts import-csv",
     "setup-tenant": "node src/cli.ts setup-tenant",
     "selftest": "node src/cli.ts selftest",
+    "media-add": "node src/cli.ts media-add",
     "proof-video": "node src/cli.ts proof-video",
     "test": "node --test \"tests/**/*.test.ts\"",
     "verify": "node src/cli.ts verify",

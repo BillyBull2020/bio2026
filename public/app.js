@@ -261,7 +261,12 @@ function renderOperatorFields() {
     el.innerHTML = `<input id="op-to" type="email" placeholder="Recipient email" />
       <input id="op-subject" type="text" placeholder="Subject" />`;
   } else if (S.operatorType === "social_publish") {
-    el.innerHTML = `<input id="op-platforms" type="text" placeholder="Platforms (facebook, instagram, linkedin)" value="facebook, instagram" />`;
+    el.innerHTML = `<input id="op-platforms" type="text" placeholder="Platforms (facebook, instagram, linkedin)" value="facebook, instagram" />
+      <input id="op-image" type="url" placeholder="Image URL (https://...)" />
+      <input id="op-video" type="url" placeholder="Video URL (https://...mp4)" />
+      <input id="op-thumb" type="url" placeholder="Video thumbnail URL (optional)" />
+      <input id="op-alt" type="text" placeholder="Image alt text (optional)" />
+      <input id="op-schedule" type="datetime-local" title="Schedule (optional)" />`;
   } else {
     el.innerHTML = "";
   }
@@ -328,6 +333,12 @@ async function runOperatorTask() {
     }
     if (S.operatorType === "social_publish") {
       payload.platforms = ($("#op-platforms")?.value ?? "facebook, instagram").split(",").map((s) => s.trim()).filter(Boolean);
+      payload.imageUrl = $("#op-image")?.value?.trim() || undefined;
+      payload.videoUrl = $("#op-video")?.value?.trim() || undefined;
+      payload.thumbnailUrl = $("#op-thumb")?.value?.trim() || undefined;
+      payload.altText = $("#op-alt")?.value?.trim() || undefined;
+      const when = $("#op-schedule")?.value;
+      payload.scheduledAt = when ? new Date(when).toISOString() : undefined;
     }
     await api("/api/operator/tasks", { method: "POST", body: JSON.stringify(payload) });
     $("#op-prompt").value = "";

@@ -81,10 +81,11 @@ the safe shadow mode.
 |---|---|---|
 | Create a subscription Checkout URL | **Works** | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID` |
 | Push the book to a CRM/automation | **Works** | `CRM_WEBHOOK_URL` (n8n, Make, Zapier, Airtable) |
-| Publish an approved social post | **Works** | `SOCIAL_WEBHOOK_URL` (n8n, Make, Postiz, Buffer) |
+| Publish an approved social post | **Works** | `BUFFER_API_KEY` + `BUFFER_CHANNEL_IDS`, or `SOCIAL_WEBHOOK_URL` |
+| Host a public image/video URL | **Works** | `CHOICE_PUBLIC_URL` + `npm run media-add -- --file ...` |
 | Operator research / content / sales drafts | **Works** | Hermes + free model |
 | Operator send email after approval | **Works** | Resend configured |
-| Operator social post after approval | **Works** | Social webhook configured |
+| Operator social post after approval | **Works** | Buffer or social webhook configured |
 | CRM write from the Operator | **Not built** | Add an MCP (Airtable, Close, HubSpot) and an approval path |
 
 ## Not built
@@ -94,7 +95,8 @@ the safe shadow mode.
 - Voicemail transcription, call recording, or live transfer.
 - Ad management, lead purchasing, or list scraping.
 - Invoicing, payments, accounting, inventory, payroll.
-- CRM sync (HubSpot/Salesforce/Jobber/ServiceTitan).
+- Native CRM write-back via MCP. A generic `CRM_WEBHOOK_URL` sync works; mapping to Jobber,
+  HubSpot, ServiceTitan or Salesforce is the receiver's job.
 - Google Business Profile review API. The OS asks for a review with a link; it does not post.
 - Multi-tenant SaaS auth. Today: one tenant per deployment, Basic Auth.
 - Mobile app.
@@ -123,11 +125,13 @@ daily brief.
 
 `/api/operator/tasks` runs Hermes with:
 
-- **Skills**: `prospect-research`, `social-calendar`, `sales-sequence`, `crm-hygiene`.
+- **Skills**: `prospect-research`, `social-calendar`, `social-post`, `sales-sequence`,
+  `email-draft`, `crm-hygiene`, `lead-qualification`, `objection-handling`, `offer-strategy`,
+  `cold-email`.
 - **Tools**: web research for prospect tasks; MCP servers when configured.
 - **A workspace**: `data/operator/workspace`, not the customer event log.
-- **Approval**: `send_email` uses Resend only after you approve. `social_publish` uses your
-  `SOCIAL_WEBHOOK_URL` only after you approve. Drafts never send.
+- **Approval**: `send_email` uses Resend only after you approve. `social_publish` uses Buffer
+  (image/video assets) or `SOCIAL_WEBHOOK_URL` only after you approve. Drafts never send.
 
 | Operator task | What it does | Approval |
 |---|---|---|
@@ -136,7 +140,7 @@ daily brief.
 | Sales sequence | 3-email outbound sequence | No |
 | CRM audit | Duplicates, consent gaps, stale records | No |
 | Send email | Draft, then send via Resend | **Yes** |
-| Publish social | Draft, then post via your social webhook | **Yes** |
+| Publish social | Draft, then post via Buffer (image/video) or social webhook | **Yes** |
 
 This is the line: **Hermes can think and research with tools; it cannot touch a customer or a
 public account without a human click.**
@@ -162,7 +166,7 @@ that is how accounts get banned.
 ## Test everything
 
 ```powershell
-npm test          # 77 unit/integration tests
+npm test          # 80 unit/integration tests
 npm run selftest  # 11 end-to-end checks with mock Twilio/Resend/Cal.diy/Stripe/CRM
 npm run verify    # hash-chain check on the live data
 ```

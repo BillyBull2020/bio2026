@@ -14,7 +14,7 @@ simple:
 | **Sales sequence** | Writes 3 emails and the send days | None | No |
 | **CRM audit** | Finds duplicates, consent gaps and stale records | None | No |
 | **Send email** | Writes the body, then sends via Resend | Resend | **Yes** |
-| **Publish social** | Writes the post, then posts via your webhook | Social webhook | **Yes** |
+| **Publish social** | Writes the post, then sends to Buffer (image/video) or a webhook | Buffer / webhook | **Yes** |
 
 The operator runs in `data/operator/workspace`, not the customer event log. It receives the
 business context (name, trade, city, owner, ticket), not the contact list.
@@ -99,26 +99,33 @@ Each needs OAuth or an API key. Start read-only; add writes after the workflow i
 
 ### Social
 
-Do not give Hermes a browser logged into X/LinkedIn and call it automation. Use a scheduler or
-an automation webhook:
+Buffer is the preferred scheduler. Set:
 
 ```env
-SOCIAL_WEBHOOK_URL=https://your-n8n.example/webhook/social
-SOCIAL_WEBHOOK_TOKEN=optional-bearer
+BUFFER_API_KEY=...
+BUFFER_ORGANIZATION_ID=...
+BUFFER_CHANNEL_IDS=ch_1,ch_2
+BUFFER_SHARE_MODE=addToQueue
 ```
 
-The approved post is sent as:
+The adapter uses Buffer's GraphQL `createPost`, with `assets: [{ image: { url } }]` or
+`assets: [{ video: { url, thumbnailUrl } }]`. The Operator form accepts an image URL, a video
+URL, an optional thumbnail and alt text.
 
-```json
-{
-  "text": "...",
-  "platforms": ["facebook", "instagram"],
-  "approved": true
-}
+If Buffer is not configured, the approved post goes to `SOCIAL_WEBHOOK_URL` (n8n, Make,
+Postiz).
+
+### Media
+
+A local file is not a public URL. Put the rendered image/video on the public media route:
+
+```powershell
+npm run media-add -- --file .\renders\roof.mp4
 ```
 
-Point that at n8n, Make, Postiz, Buffer, or your own worker. The platform credentials stay in
-the scheduler, not in the model.
+Paste the returned URL into the social task. It serves from `data/media` with an unguessable
+token, no Basic Auth, and an immutable cache header. Supported: jpg, png, webp, gif, mp4, mov,
+webm.
 
 ## Models
 

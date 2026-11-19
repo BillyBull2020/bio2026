@@ -1,14 +1,36 @@
+import { bufferConfigFromEnv, publishToBuffer, type BufferPostResult } from "./buffer.ts";
+
 /**
  * Social publishing is a provider detail.
  *
- * Point SOCIAL_WEBHOOK_URL at n8n, Make, Postiz, Buffer, or your own worker. The Operator
- * sends an approved post; the receiver owns the platform credentials. If it is not configured,
- * the task is marked skipped rather than pretending it was published.
+ * If Buffer is configured, the approved post goes through Buffer's GraphQL API (images and
+ * videos included). Otherwise it goes to SOCIAL_WEBHOOK_URL (n8n, Make, Postiz, Buffer).
  */
 export interface SocialConfig {
   url?: string;
   token?: string;
   timeoutMs: number;
+}
+
+export interface SocialInput {
+  text: string;
+  platforms: string[];
+  imageUrl?: string;
+  videoUrl?: string;
+  thumbnailUrl?: string;
+  altText?: string;
+  scheduledAt?: string;
+  channelIds?: string[];
+}
+
+export interface SocialResult {
+  ok: boolean;
+  skipped?: boolean;
+  id?: string;
+  error?: string;
+  status?: number;
+  provider?: "buffer" | "webhook";
+  results?: BufferPostResult[];
 }
 
 export function socialConfigFromEnv(env: NodeJS.ProcessEnv = process.env): SocialConfig {
@@ -21,10 +43,28 @@ export function socialConfigFromEnv(env: NodeJS.ProcessEnv = process.env): Socia
 
 export async function publishSocial(
   config: SocialConfig,
-  input: { text: string; platforms: string[]; imageUrl?: string },
-): Promise<{ ok: boolean; skipped?: boolean; id?: string; error?: string; status?: number }> {
+  input: SocialInput,
+): Promise<SocialResult> {
+  const buffer = bufferConfigFromEnv();
+  if (buffer) {
+    const result = await publishToBuffer(buffer, {
+      text: input.text,
+      imageUrl: input.imageUrl,
+      videoUrl: input.videoUrl,
+      thumbnailUrl: input.thumbnailUrl,
+      altText: input.altText,
+      scheduledAt: input.scheduledAt,
+      channelIds: input.channelIds,
+    });
+    return {
+      ...result,
+      provider: "buffer",
+      id: result.results.find((r) => r.ok)?.postId,
+    };
+  }
+
   if (!config.url) {
-    return { ok: false, skipped: true, error: "SOCIAL_WEBHOOK_URL is not configured" };
+    return { ok: false, skipped: true, error: "Buffer is not configured and SOCIAL_WEBHOOK_URL is empty" };
   }
   try {
     const response = await fetch(config.url, {
@@ -38,10 +78,10 @@ export async function publishSocial(
     });
     const payload = (await response.json().catch(() => ({}))) as { id?: string; error?: string };
     if (!response.ok) {
-      return { ok: false, status: response.status, error: payload.error ?? `social webhook returned ${response.status}` };
+      return { ok: false, status: response.status, provider: "webhook", error: payload.error ?? `social webhook returned ${response.status}` };
     }
-    return { ok: true, status: response.status, id: payload.id };
+    return { ok: true, status: response.status, provider: "webhook", id: payload.id };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "social publish failed" };
+    return { ok: false, provider: "webhook", error: error instanceof Error ? error.message : "social publish failed" };
   }
 }
