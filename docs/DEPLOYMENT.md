@@ -193,7 +193,7 @@ HERMES_PROVIDER=openrouter
 HERMES_MODEL=meta-llama/llama-3.3-70b-instruct:free
 HERMES_FALLBACK_PROVIDER=ollama
 HERMES_FALLBACK_MODEL=nemotron-3.5-lightning:30b-a3b
-OPERATOR_MODEL=qwen/qwen3-235b-a22b:free
+OPERATOR_MODEL=meta-llama/llama-3.3-70b-instruct:free
 
 # optional console protection (Basic Auth). Set both to enable.
 CHOICE_CONSOLE_USER=billy

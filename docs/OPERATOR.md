@@ -131,7 +131,7 @@ webm.
 
 - Assistant: `meta-llama/llama-3.3-70b-instruct:free` (OpenRouter), fallback local Ollama
   `nemotron-3.5-lightning:30b-a3b`.
-- Operator: `qwen/qwen3-235b-a22b:free` (OpenRouter), fallback local Ollama.
+- Operator: `meta-llama/llama-3.3-70b-instruct:free` (OpenRouter), fallback local Ollama.
 
 All free. Set `OPERATOR_MODEL` / `OPERATOR_PROVIDER` to change the operator without touching the
 assistant.

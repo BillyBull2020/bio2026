@@ -124,7 +124,7 @@ export async function runOperatorTask(task: OperatorTask, tenant: Tenant): Promi
   const attempts = [
     {
       provider: process.env.OPERATOR_PROVIDER ?? status.provider,
-      model: process.env.OPERATOR_MODEL ?? "qwen/qwen3-235b-a22b:free",
+      model: process.env.OPERATOR_MODEL ?? "meta-llama/llama-3.3-70b-instruct:free",
     },
     ...(status.fallback ? [status.fallback] : []),
   ];

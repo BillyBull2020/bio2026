@@ -18,6 +18,7 @@ Nothing is faked: if a provider is absent, the endpoint returns `skipped` or **4
 | **CRM sync** | `src/tools/crm.ts` | `CRM_WEBHOOK_URL` (n8n, Make, Zapier, Airtable Automations) | `POST /api/crm/sync` |
 | **Monday CRM** | Hermes MCP | Accept your invite, then `hermes mcp install monday` + OAuth | `hermes mcp list` |
 | **Hermes operator** | `src/operator/` | Hermes + Ollama/OpenRouter | `GET /api/operator/status` |
+| **Choice OS MCP** | `src/mcp/server.ts` | Hermes MCP client | `hermes mcp test choice-os` |
 | **Hermes MCPs** | Hermes config | OAuth/keys per server | `hermes mcp list` |
 
 ## Environment
@@ -63,7 +64,7 @@ HERMES_PROVIDER=openrouter
 HERMES_MODEL=meta-llama/llama-3.3-70b-instruct:free
 HERMES_FALLBACK_PROVIDER=ollama
 HERMES_FALLBACK_MODEL=nemotron-3.5-lightning:30b-a3b
-OPERATOR_MODEL=qwen/qwen3-235b-a22b:free
+OPERATOR_MODEL=meta-llama/llama-3.3-70b-instruct:free
 ```
 
 ## Social, specifically

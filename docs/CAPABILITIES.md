@@ -147,8 +147,16 @@ public account without a human click.**
 
 ### MCP and skills
 
-The four operator skills are installed in the Hermes profile. To add a business system, install
-its MCP server, not a new agent:
+The ten operator skills are installed in the Hermes profile. Hermes also has the **Choice OS
+MCP** (`choice-os`, 11 tools), so it can call the OS directly:
+
+```powershell
+hermes mcp test choice-os
+hermes chat -t choice-os
+```
+
+See [`HERMES-MCP.md`](HERMES-MCP.md). To add a business system, install its MCP server, not a
+new agent:
 
 ```powershell
 hermes mcp install airtable      # CRM / ops base
@@ -156,12 +164,13 @@ hermes mcp install close         # sales CRM
 hermes mcp install klaviyo       # email marketing
 hermes mcp install notion        # docs / SOPs
 hermes mcp install stripe        # payments / invoices
+hermes mcp install monday        # Monday boards
 ```
 
 Each one needs its own OAuth or API key. Start read-only; add writes only after the workflow is
-tested. Social publishing uses a webhook (n8n, Postiz, Buffer, Make) so the platform credentials
-stay outside the OS. Do not give Hermes a browser logged into X/LinkedIn and call it automation;
-that is how accounts get banned.
+tested. Social publishing uses Buffer (native image/video assets) or a webhook (n8n, Postiz,
+Make) so platform credentials stay outside the OS. Do not give Hermes a browser logged into
+X/LinkedIn and call it automation; that is how accounts get banned.
 
 ## Test everything
 

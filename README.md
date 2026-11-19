@@ -259,9 +259,19 @@ weekly owner report, the at-risk list. It gets a compact snapshot, no contact li
 send or mutate. In **Operator**, it has real skills and tools: prospect research, social
 calendar, sales sequence, CRM audit. Drafts are free; `send_email` and `social_publish` stop for
 your approval. That is the line — Hermes can think and research with tools, but it cannot touch
-a customer or a public account without a click. See
-[`docs/CAPABILITIES.md`](docs/CAPABILITIES.md), [`docs/OPERATOR.md`](docs/OPERATOR.md) and
-[`docs/HERMES.md`](docs/HERMES.md).
+a customer or a public account without a click.
+
+Hermes is also connected to the OS as the **`choice-os` MCP server** (11 tools), so it can call
+the business snapshot, operator tasks, media, Buffer, Stripe, CRM and calendar directly:
+
+```powershell
+hermes mcp test choice-os
+hermes chat -t choice-os
+```
+
+See
+[`docs/CAPABILITIES.md`](docs/CAPABILITIES.md), [`docs/OPERATOR.md`](docs/OPERATOR.md),
+[`docs/HERMES-MCP.md`](docs/HERMES-MCP.md) and [`docs/HERMES.md`](docs/HERMES.md).
 
 Full rationale and the integration contract: [`docs/TOOLING.md`](docs/TOOLING.md).
 
