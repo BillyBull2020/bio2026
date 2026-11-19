@@ -344,6 +344,194 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
         return;
       }
 
+      if (path === "/api/business") {
+        const now = new Date().toISOString();
+        const view = store.portfolio(now);
+        const byId = new Map(view.map((v) => [v.id, v]));
+        const contacts = store.contacts().filter((c) => !c.optedOut && c.stage !== "exited");
+        const bookings = store.state.bookings;
+        const revenueRecovered = bookings.reduce((sum, b) => sum + b.value, 0);
+        const aiCost = Number(process.env.CHOICE_MONTHLY_COST ?? 1_400);
+        const nowMs = Date.parse(now);
+        const actionsToday = store.state.actions.filter((a) => nowMs - Date.parse(a.at) <= 86_400_000);
+
+        const signalLabel: Record<string, string> = {
+          missed_call: "Missed call",
+          inbound_call: "Inbound call",
+          form_fill: "New inquiry",
+          reply_objection_price: "Price objection",
+          reply_objection_trust: "Trust objection",
+          reply_objection_time: "Timing objection",
+          reply_not_now: "Not now",
+          job_completed: "Job completed",
+          complaint: "Complaint",
+          booking: "Booked",
+          purchase: "Purchased",
+          reply_positive: "Positive reply",
+          reply_question: "Question",
+          no_response: "No response",
+          review_left: "Review left",
+          human_handoff: "Wants a human",
+          seasonal_event: "Seasonal trigger",
+        };
+
+        const isStop = (c: (typeof contacts)[number]) =>
+          c.lastSignal?.type === "missed_call" ||
+          c.tags.includes("past_customer") ||
+          c.tags.includes("dormant") ||
+          c.tags.includes("missed_call");
+        const isTrust = (c: (typeof contacts)[number]) =>
+          byId.get(c.id)?.binding === "trust" || c.tags.some((t) => t.startsWith("objection_")) || c.tags.includes("complaint");
+        const isClose = (c: (typeof contacts)[number]) =>
+          (byId.get(c.id)?.readiness ?? 0) >= 0.5 ||
+          ["framed", "proven", "committed"].includes(byId.get(c.id)?.stage ?? "");
+
+        const stopContacts = contacts.filter(isStop);
+        const trustContacts = contacts.filter(isTrust);
+        const closeContacts = contacts.filter(isClose);
+        const pipelineValue = Math.round(
+          view.filter((v) => v.stage !== "exited").reduce((sum, v) => sum + v.ticket * v.readiness * 0.35, 0),
+        );
+        const openReviews = contacts.filter(
+          (c) => c.tags.includes("job_complete") && c.lastSignal?.type !== "review_left" && !c.doNotAskReview,
+        ).length;
+        const missedCalls = contacts.reduce((sum, c) => sum + c.lostCallsPerMonth, 0);
+
+        const queue = contacts
+          .map((c) => {
+            const plan = conductor.planFor(c.id, now);
+            const v = byId.get(c.id);
+            if (!plan || !v) return null;
+            return {
+              id: c.id,
+              name: `${c.firstName} ${c.lastName}`,
+              company: c.company,
+              stage: v.stage,
+              situation: signalLabel[c.lastSignal?.type ?? ""] ?? "No recent signal",
+              move: plan.move.label,
+              moveId: plan.move.id,
+              channel: plan.channel,
+              value: c.estimatedTicket,
+              readiness: v.readiness,
+              blocked: !plan.verdict.allowed,
+              why: plan.decision.whyNow,
+            };
+          })
+          .filter(Boolean)
+          .sort((a, b) => Number(b!.readiness) - Number(a!.readiness))
+          .slice(0, 8);
+
+        send(res, 200, {
+          now,
+          tenant: store.state.tenant,
+          headline: {
+            revenueRecovered,
+            jobsBooked: bookings.length,
+            callsAnswered: contacts.filter((c) => c.lastInboundAt).length,
+            pipelineValue,
+            missedCalls,
+            openReviews,
+            aiCost,
+            roi: Number((revenueRecovered / Math.max(1, aiCost)).toFixed(1)),
+            actionsToday: actionsToday.length,
+          },
+          phases: [
+            {
+              id: "stop",
+              number: "01",
+              name: "Stop the bleeding",
+              system: "threat",
+              neuro: "Cortisol · loss aversion",
+              count: stopContacts.length,
+              value: stopContacts.reduce((sum, c) => sum + c.missedRevenuePerMonth, 0),
+              description:
+                "Every missed call and every dead customer in the database is revenue leaking right now. The OS answers, re-opens the file, and puts a real number on the leak.",
+              actions: [
+                "Answer every missed call in under 60 seconds",
+                "Work the existing customer list before buying new leads",
+                "Name the leak with a verified, customer-specific number",
+              ],
+            },
+            {
+              id: "trust",
+              number: "02",
+              name: "Build trust",
+              system: "social",
+              neuro: "Oxytocin · social safety",
+              description:
+                "Trust is the constraint before the close. The OS sends same-trade proof, answers the objection that was actually raised, and puts a human on the line when trust is fragile.",
+              count: trustContacts.length,
+              value: Math.round(trustContacts.reduce((sum, c) => sum + c.estimatedTicket * 0.35, 0)),
+              actions: [
+                "Same-trade, same-market proof — never a generic testimonial",
+                "Answer the real objection, with a claim attached",
+                "Human handoff when the customer asks for one",
+              ],
+            },
+            {
+              id: "close",
+              number: "03",
+              name: "Close the job",
+              system: "deliberative",
+              neuro: "Dopamine · anticipation + clarity",
+              description:
+                "The decision is already emotional; the neocortex needs the math and one next step. The OS offers two real slots, states the next step plainly, and confirms it.",
+              count: closeContacts.length,
+              value: Math.round(closeContacts.reduce((sum, c) => sum + c.estimatedTicket, 0) * 0.35),
+              actions: [
+                "Two real slots, never invented scarcity",
+                "One next step, with the time it takes",
+                "Confirm and kill the no-show",
+              ],
+            },
+          ],
+          queue,
+          connected: {
+            delivery: Boolean(deliveryConfigFromEnv().url),
+            llm: Boolean(llmConfigFromEnv()),
+          },
+        });
+        return;
+      }
+
+      if (path === "/api/run-day" && method === "POST") {
+        const body = await readBody(req);
+        const now = new Date().toISOString();
+        const results = conductor.tick(now, Number(body.limit ?? 8));
+        const enriched = await Promise.all(
+          results.map(async (r) => {
+            const contact = store.getContact(r.plan.decision.contactId);
+            const delivery = r.action && contact ? await deliverAction(r.action, contact) : null;
+            return {
+              contactId: r.plan.decision.contactId,
+              name: contact ? `${contact.firstName} ${contact.lastName}` : r.plan.decision.contactId,
+              moveId: r.plan.decision.moveId,
+              move: r.plan.move.label,
+              channel: r.plan.channel,
+              action: r.action ?? null,
+              delivery,
+              blocked: Boolean(r.blocked),
+              whyNow: r.plan.decision.whyNow,
+              value: contact?.estimatedTicket ?? 0,
+              deltaReadiness: r.plan.decision.deltaReadiness,
+            };
+          }),
+        );
+        const actioned = enriched.filter((r) => r.action);
+        const moved = actioned.reduce((sum, r) => sum + r.value * (r.deltaReadiness / 100) * 0.35, 0);
+        send(res, 200, {
+          now,
+          summary: {
+            actions: actioned.length,
+            waits: enriched.filter((r) => !r.action && !r.blocked).length,
+            blocked: enriched.filter((r) => r.blocked).length,
+            valueMoved: Math.round(moved),
+          },
+          results: enriched,
+        });
+        return;
+      }
+
       if (path === "/api/events") {
         const limit = Math.min(500, Number(url.searchParams.get("limit") ?? 80));
         send(res, 200, {

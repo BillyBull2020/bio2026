@@ -36,6 +36,50 @@
     </div>
   </header>
 
+  <nav class="viewbar" aria-label="Views">
+    <button class="view-tab active" data-view="business">Business</button>
+    <button class="view-tab" data-view="kernel">Kernel</button>
+    <span class="view-hint">Business is the product. Kernel is the engine.</span>
+  </nav>
+
+  <section id="business-view" class="view active" aria-label="Business">
+    <div class="biz-hero">
+      <div class="biz-hero-copy">
+        <span class="eyebrow">THE REVENUE ENGINE</span>
+        <h1>Run the revenue side of <span id="biz-tenant">your business</span>.</h1>
+        <p>Every call answered. Every past customer worked. Every objection answered. Every job booked. The OS chooses the next move from where the customer actually is — not from a script, and not from a roster of agents.</p>
+        <p class="biz-sub">Under the hood, every move is scored against six resources — safety, trust, anticipation, clarity, agency, commitment — the conditions a person needs before they buy. The three phases below are the neurobiology: stop the threat, earn trust, make the next step obvious.</p>
+        <div class="biz-tags"><span>Answer</span><span>Reactivate</span><span>Convert</span><span>Review</span><span>Report</span></div>
+      </div>
+      <div class="biz-run">
+        <button class="btn primary big" id="run-day-btn">Run my day</button>
+        <span class="biz-run-note" id="run-day-note">Up to 8 decisions · policy-gated</span>
+      </div>
+    </div>
+    <div class="run-results" id="run-results"></div>
+
+    <div class="biz-kpis" id="biz-kpis"></div>
+    <div class="phase-grid" id="phase-grid"></div>
+
+    <div class="biz-lower">
+      <div class="panel biz-queue">
+        <div class="panel-head"><h2>Today's queue</h2><span class="mono" id="queue-count">—</span></div>
+        <div id="biz-queue"></div>
+      </div>
+      <div class="panel owner-panel">
+        <div class="panel-head"><h2>What the owner does</h2></div>
+        <ol class="owner-steps">
+          <li><b>Connect the phone and inbox.</b><span>One webhook to Twilio and Resend. The OS answers, replies, and books.</span></li>
+          <li><b>Press “Run my day.”</b><span>It works the queue, respects every rail, and tells you exactly what it did.</span></li>
+          <li><b>Watch the booked jobs.</b><span>Revenue recovered is the only scoreboard that matters.</span></li>
+        </ol>
+        <div class="owner-note" id="owner-note">The demo book is live. Connect delivery to run it on a real business.</div>
+      </div>
+    </div>
+  </section>
+
+  <div id="kernel-view" class="view">
+
   <section class="kpis" id="kpis" aria-label="Kernel metrics"></section>
 
   <main class="grid">
@@ -156,6 +200,8 @@
       </div>
     </div>
   </section>
+
+  </div>
 
   <footer class="foot">
     <span class="foot-brand"><img src="/brand/crown-64.png" alt="" /> BioDynamX Engineering Group · Choice OS</span>

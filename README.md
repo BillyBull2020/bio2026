@@ -7,12 +7,18 @@
 [![Tests](https://img.shields.io/badge/tests-51-61c88f)](tests)
 [![License](https://img.shields.io/badge/license-source--available-dfa64c)](LICENSE)
 
-**One kernel. Four roles. A decision-state operating system for ethical revenue conversations.**
+**The AI revenue operating system for service businesses.** It answers the phone, works the
+customers you already have, handles the objection, books the job, asks for the review, and
+reports the money — with a decision engine modeled on the neurobiology of choice.
 
-Most "AI agent" products model people as a roster of personalities. Choice OS models the
-*decision* instead: six resources a person needs before they can say yes, a scheduler that
-finds the binding constraint, and a policy kernel that makes coercion structurally
-impossible. The agent is the smallest part of the system.
+Not a chatbot. Not another CRM. Not fourteen agents. One kernel decides who to contact, what
+to say, when to stop, and what it refuses to do. The agent is the smallest part of the system.
+
+**What it runs:** capture → reactivate → convert → review → report. The owner connects the phone
+and inbox, presses **Run my day**, and watches booked jobs. The OS shows the revenue at stake,
+the three decision phases, and every action it took.
+
+**New here?** [What Choice OS is for](docs/WHAT-IT-IS.md) · [Start here](START-HERE.md) · [Open the console](http://127.0.0.1:4177)
 
 **Repository:** https://github.com/BillyBull2020/bio2026
 
@@ -75,15 +81,14 @@ docker build -t biodynamx/choice-os .
 docker run -p 4177:4177 -v choice-data:/app/data biodynamx/choice-os
 ```
 
-The console is the product surface. It shows, for any contact:
+The console opens on the **Business** view: revenue recovered, pipeline at stake, the three
+decision phases, today's queue, and one **Run my day** button. The **Kernel** tab shows the
+engine underneath — the six-resource field, the binding constraint, the drafted message, the
+policy verdict and the alternatives it rejected.
 
-- the six-resource decision field and the **binding constraint**,
-- the next legal move, its role, channel, expected readiness gain and pressure cost,
-- the drafted message and the **policy verdict** on every rail,
-- the alternatives that were considered and why they lost,
-- the append-only, SHA-256-chained event log.
+![Choice OS business view](./shot-business.png)
 
-![Operator console](./shot-console.png)
+New to the product? Read [What Choice OS is for](docs/WHAT-IT-IS.md) first.
 
 ---
 

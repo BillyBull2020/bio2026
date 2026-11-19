@@ -15,7 +15,34 @@ do this on a trusted network.
 
 ---
 
-## What you are looking at
+## The Business tab is the product
+
+The console opens on **Business**. It answers "what is this for?" in one screen:
+
+- **Revenue recovered, pipeline at stake, return on AI** — the scoreboard the owner cares about.
+- **Three phases** — Stop the bleeding (cortisol/loss), Build trust (oxytocin/safety), Close the job (dopamine/anticipation + clarity). Each phase shows the contacts in it, the dollars at stake, and what the OS does.
+- **Today's queue** — the next move for every open contact, with value and readiness.
+- **Run my day** — the OS ranks the book, plans the next legal move, checks every rail, sends or logs the action, and reports what moved.
+
+Press **Run my day** first. Then open the **Kernel** tab to see *why* it chose each move.
+
+The neurobiology is not decoration. Each phase maps to a different decision system and a
+different business play:
+
+| Phase | Customer question | Neuro-logic | Business play |
+|---|---|---|---|
+| **01 Stop the bleeding** | "Am I losing something?" | Cortisol, loss aversion | Answer the missed call, work the dead list, name the leak with a verified number. |
+| **02 Build trust** | "Can I trust you?" | Oxytocin, social safety | Same-trade proof, answer the real objection, put a human on the line. |
+| **03 Close the job** | "What do I do next?" | Dopamine, anticipation, clarity | Two real slots, one next step, confirm the booking. |
+
+Under those phases, the kernel scores six resources for every person: **safety, trust,
+anticipation, clarity, agency, commitment.** It moves the one that is actually blocking the
+purchase, then stops. The 3.0 pressure budget and the policy rails are what keep that from
+turning into manipulation.
+
+---
+
+## The Kernel tab: what you are looking at
 
 ### 1. Portfolio (left)
 

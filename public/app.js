@@ -6,6 +6,8 @@ const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 const S = {
   data: null,
+  business: null,
+  view: "business",
   selectedId: null,
   detail: null,
   plan: null,
@@ -111,7 +113,9 @@ async function boot() {
   setInterval(clock, 1000);
   try {
     S.data = await api("/api/state");
+    S.business = await api("/api/business").catch(() => null);
     renderAll();
+    if (S.business) renderBusiness(S.business);
     const first = S.data.contacts.find((c) => c.name === "Dana Whitfield") ?? S.data.contacts[0];
     if (first) await selectContact(first.id);
     await loadEvents();
@@ -129,6 +133,105 @@ function renderAll() {
   renderKpis(metrics);
   renderRoster();
   renderClaims(S.detail);
+}
+
+/* ── business view ───────────────────────────────────────── */
+
+const PHASE_COLOR = { threat: "#d9b45b", social: "#34d399", deliberative: "#a78bfa" };
+
+function renderBusiness(b) {
+  $("#biz-tenant").textContent = b.tenant.name;
+  const h = b.headline;
+  const kpis = [
+    { label: "Revenue recovered", value: fmtMoney(h.revenueRecovered), sub: `${fmtNum(h.jobsBooked)} booked jobs`, accent: "#34d399" },
+    { label: "Pipeline at stake", value: fmtMoney(h.pipelineValue), sub: `${fmtNum(h.missedCalls)} missed calls / mo`, accent: "#d9b45b" },
+    { label: "Actions today", value: fmtNum(h.actionsToday), sub: `${fmtMoney(h.aiCost)} / mo AI cost`, accent: "#a78bfa" },
+    { label: "Return on AI", value: `${Number(h.roi).toFixed(1)}x`, sub: `on ${fmtMoney(h.aiCost)} / mo`, accent: "#3b82f6" },
+    { label: "Reviews to ask", value: fmtNum(h.openReviews), sub: "every completed job, no gating", accent: "#d9b45b" },
+    { label: "Calls answered", value: fmtNum(h.callsAnswered), sub: "inbound conversations", accent: "#34d399" },
+  ];
+  $("#biz-kpis").innerHTML = kpis
+    .map(
+      (k) => `<div class="biz-kpi" style="--accent:${k.accent}">
+        <span class="bk-label">${esc(k.label)}</span>
+        <span class="bk-value">${esc(k.value)}</span>
+        <span class="bk-sub">${k.sub}</span>
+      </div>`,
+    )
+    .join("");
+
+  $("#phase-grid").innerHTML = b.phases
+    .map((p) => {
+      const color = PHASE_COLOR[p.system] ?? "#a78bfa";
+      return `<article class="phase" style="--phase-color:${color}">
+        <div class="p-top"><span class="p-num">PHASE ${esc(p.number)}</span><span class="p-neuro">${esc(p.neuro)}</span></div>
+        <h3>${esc(p.name)}</h3>
+        <p>${esc(p.description)}</p>
+        <div class="p-stats">
+          <div class="p-stat"><span class="v">${fmtNum(p.count)}</span><span class="l">contacts</span></div>
+          <div class="p-stat"><span class="v">${fmtMoney(p.value)}</span><span class="l">at stake</span></div>
+        </div>
+        <ul>${p.actions.map((a) => `<li>${esc(a)}</li>`).join("")}</ul>
+      </article>`;
+    })
+    .join("");
+
+  $("#queue-count").textContent = `${b.queue.length} open`;
+  $("#biz-queue").innerHTML = b.queue.length
+    ? b.queue
+        .map(
+          (q) => `<div class="queue-row" data-id="${q.id}" role="button" tabindex="0">
+            <div class="q-name"><b>${esc(q.name)}</b><span>${esc(q.situation)} · ${esc(title(q.stage))}</span></div>
+            <div class="q-move">${esc(q.move)}<span>${esc(q.channel)}</span></div>
+            <div class="q-value">${fmtMoney(q.value)}<span>${Math.round(q.readiness * 100)}% ready</span></div>
+            <div class="q-status ${q.blocked ? "blocked" : ""}">${q.blocked ? "Blocked" : "Ready"}</div>
+          </div>`,
+        )
+        .join("")
+    : `<div class="sim-placeholder" style="padding:16px">No open decisions. Press “Run my day” or add contacts.</div>`;
+
+  $("#owner-note").textContent = b.connected.delivery
+    ? "Delivery is connected. “Run my day” sends through your webhook, after every rail passes."
+    : "Demo mode: decisions are logged, not delivered. Set CHOICE_WEBHOOK_URL to send through Twilio/Resend.";
+}
+
+async function runDay() {
+  const btn = $("#run-day-btn");
+  if (!btn || btn.disabled) return;
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Running…";
+  try {
+    const res = await api("/api/run-day", { method: "POST", body: JSON.stringify({ limit: 8 }) });
+    const s = res.summary;
+    const acted = res.results.filter((r) => r.action);
+    const chips = [
+      `<span class="run-chip good"><b>${s.actions}</b> actions</span>`,
+      `<span class="run-chip"><b>${s.waits}</b> waits</span>`,
+      `<span class="run-chip ${s.blocked ? "gold" : ""}"><b>${s.blocked}</b> blocked</span>`,
+      `<span class="run-chip gold"><b>${fmtMoney(s.valueMoved)}</b> moved</span>`,
+      ...acted.slice(0, 5).map((r) => `<span class="run-chip"><b>${esc(r.name)}</b> ${esc(r.move)}</span>`),
+    ];
+    $("#run-results").innerHTML = chips.join("");
+    $("#run-day-note").textContent = `${s.actions} actions · ${s.waits} waits · ${s.blocked} blocked`;
+    toast(`Ran the day: ${s.actions} actions, ${s.waits} waits, ${s.blocked} blocked. ${fmtMoney(s.valueMoved)} moved.`, "good");
+    S.data = await api("/api/state");
+    renderAll();
+    S.business = await api("/api/business");
+    renderBusiness(S.business);
+  } catch (err) {
+    toast(`Run failed: ${err.message}`, "bad");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = old;
+  }
+}
+
+function switchView(view) {
+  S.view = view;
+  $$(".view").forEach((v) => v.classList.toggle("active", v.id === `${view}-view`));
+  $$(".view-tab").forEach((t) => t.classList.toggle("active", t.dataset.view === view));
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 /* ── kpis ─────────────────────────────────────────────────── */
@@ -504,6 +607,8 @@ async function runTick() {
 async function refresh() {
   S.data = await api("/api/state");
   renderAll();
+  S.business = await api("/api/business").catch(() => S.business);
+  if (S.business) renderBusiness(S.business);
 }
 
 /* ── events ───────────────────────────────────────────────── */
@@ -613,6 +718,15 @@ function renderSimulation(r) {
 /* ── wiring ───────────────────────────────────────────────── */
 
 document.addEventListener("click", (event) => {
+  const viewTab = event.target.closest?.(".view-tab");
+  if (viewTab) switchView(viewTab.dataset.view);
+
+  const queueRow = event.target.closest?.(".queue-row");
+  if (queueRow?.dataset.id) {
+    switchView("kernel");
+    selectContact(queueRow.dataset.id);
+  }
+
   const contact = event.target.closest?.(".contact");
   if (contact?.dataset.id) selectContact(contact.dataset.id);
 
@@ -633,5 +747,6 @@ $("#reply-input")?.addEventListener("keydown", (event) => {
 });
 $("#tick-btn")?.addEventListener("click", runTick);
 $("#sim-btn")?.addEventListener("click", loadSimulation);
+$("#run-day-btn")?.addEventListener("click", runDay);
 
 boot();
