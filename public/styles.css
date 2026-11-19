@@ -685,6 +685,30 @@ body {
 .hermes-answer.error { color: var(--red); }
 .hermes-answer .h-meta { display: block; margin-top: 8px; font-family: var(--mono); font-size: 8px; letter-spacing: .08em; color: var(--dim); }
 
+/* ─── go-live checklist ───────────────────────────────────── */
+
+.setup-panel { margin-top: 12px; }
+.setup-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 14px 16px;
+}
+.setup-item {
+  display: flex; align-items: flex-start; gap: 9px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 9px 11px;
+  background: rgba(255,255,255,.015);
+}
+.setup-dot {
+  width: 7px; height: 7px; border-radius: 50%; margin-top: 4px; flex: 0 0 auto;
+  background: var(--red); box-shadow: 0 0 8px rgba(239,68,68,.5);
+}
+.setup-item.ready .setup-dot { background: var(--emerald); box-shadow: 0 0 8px rgba(52,211,153,.5); }
+.setup-item b { display: block; font-size: 10.5px; color: var(--text); font-weight: 600; }
+.setup-item span { display: block; margin-top: 2px; font-size: 9px; color: var(--dim); line-height: 1.4; }
+
 /* ─── responsive ──────────────────────────────────────────── */
 
 @media (max-width: 1320px) {
@@ -715,6 +739,7 @@ body {
   .phase-grid { grid-template-columns: 1fr; }
   .biz-lower { grid-template-columns: 1fr; }
   .hermes-body { grid-template-columns: 1fr; }
+  .setup-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 620px) {

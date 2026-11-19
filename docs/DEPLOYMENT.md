@@ -84,56 +84,63 @@ monotonic and durable.
 
 ## Delivery adapters
 
-The kernel produces an `ActionRecord`. It does not call Twilio, Resend, or Google. Wire the
-adapters after `dispatch` returns an action:
+The kernel produces an `ActionRecord`. `src/tools/delivery.ts` chooses the transport:
+
+| Channel | Provider | Required env |
+|---|---|---|
+| SMS | Twilio Messages API | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` (or `TWILIO_MESSAGING_SERVICE_SID`) |
+| Email | Resend | `RESEND_API_KEY`, `RESEND_FROM` |
+| Any | Generic webhook | `CHOICE_WEBHOOK_URL`, optional `CHOICE_WEBHOOK_TOKEN` |
+
+No vendor SDK. Twilio is form-encoded Basic Auth; Resend is JSON Bearer. If no provider is
+configured, the action is still logged and the response says `skipped: true`. Nothing is
+silently sent.
+
+```powershell
+$env:TWILIO_ACCOUNT_SID="AC..."
+$env:TWILIO_AUTH_TOKEN="..."
+$env:TWILIO_FROM="+13035550100"
+$env:RESEND_API_KEY="re_..."
+$env:RESEND_FROM="Ray <ray@yourdomain.com>"
+$env:CHOICE_PUBLIC_URL="https://os.yourdomain.com"
+```
+
+### Inbound SMS and missed calls
+
+The server exposes `POST /webhooks/twilio` (excluded from Basic Auth, verified with
+`X-Twilio-Signature` when `TWILIO_AUTH_TOKEN` is set). Point the Twilio number's **A message
+comes in** webhook at:
+
+```text
+https://os.yourdomain.com/webhooks/twilio
+```
+
+The handler:
+
+1. verifies the signature against `CHOICE_PUBLIC_URL` + the request path,
+2. matches `From` to a contact by phone, creating an `Inbound` contact if unknown,
+3. records the reply and a signal,
+4. calls `conductor.handleReply(contactId, text, now, "sms")`,
+5. returns TwiML with the reply.
+
+A voice status callback to the same URL records `no-answer`, `busy`, `failed` and `canceled`
+as `missed_call`, which feeds the **Stop the bleeding** phase.
+
+`CHOICE_PUBLIC_URL` must be the exact public origin Twilio signs. If it is wrong, valid
+webhooks return `403`.
+
+### Calendar
+
+`calendar_hold` requires a real deadline. The adapter should create two actual holds before
+the kernel is allowed to offer them:
 
 ```ts
-const result = conductor.dispatch(contactId, now);
-if (result?.action) {
-  if (result.action.channel === "sms") await twilio.messages.create({
-    to: contact.phone,
-    from: process.env.TWILIO_FROM,
-    body: result.action.body,
-  });
-  if (result.action.channel === "email") await resend.emails.send({
-    to: contact.email,
-    from: "ray@summitridgeroofing.com",
-    subject: result.action.subject ?? "",
-    text: result.action.body,
-  });
-}
+const holds = await calendar.holdTwoSlots(contact.timezone, now);
+conductor.dispatch(contactId, now, { facts: { slotA: holds.a, slotB: holds.b } });
 ```
 
-### Generic delivery webhook
-
-The fastest path to a real send is a webhook, not a vendor SDK. Set:
-
-```bash
-CHOICE_WEBHOOK_URL=https://your-worker.example/send
-CHOICE_WEBHOOK_TOKEN=optional-bearer
-```
-
-`POST /api/contacts/:id/send` (and `/api/tick`) will deliver the approved `ActionRecord` to
-that URL with `to`, `channel`, `subject`, `body`, `moveId`, `claimIds`, `policyAllowed` and
-the contact identity. The receiver owns Twilio, Resend, or whatever transport you use. If
-the webhook is not configured, the action is still logged and the response says
-`delivery: { ok: false, skipped: true }`. Nothing is silently sent.
-
-This separation is deliberate: the policy gate must run before transport, and the kernel
-must not care which vendor is behind it.
-
-### Inbound
-
-Twilio webhook → `conductor.handleReply(contactId, text, now, channel)`. The conductor:
-
-1. classifies the intent,
-2. writes the reply and the signal,
-3. opts out on STOP,
-4. books on a booking intent,
-5. re-plans on the new state and returns the reply message.
-
-Return the reply body as TwiML or send it through the same adapter. Never let a separate
-"reply agent" write a second message.
+If the calendar is unavailable, the move is blocked by `unreal_deadline`. That is the correct
+failure. Calendar is not connected in the pilot yet; **do not promise a hold** until it is.
 
 ### Calendar
 
@@ -165,7 +172,15 @@ CHOICE_LLM_MODEL=gpt-4.1-mini
 TWILIO_ACCOUNT_SID=...
 TWILIO_AUTH_TOKEN=...
 TWILIO_FROM=+1303...
+# or TWILIO_MESSAGING_SERVICE_SID=MG...
 RESEND_API_KEY=...
+RESEND_FROM="Your Company <hello@yourdomain.com>"
+CHOICE_PUBLIC_URL=https://os.yourdomain.com
+
+# optional: Hermes read-only ops analyst
+HERMES_BIN=C:\Users\you\AppData\Local\hermes\bin\hermes.exe
+HERMES_PROVIDER=google
+HERMES_MODEL=gemini-3.8-flash
 
 # optional console protection (Basic Auth). Set both to enable.
 CHOICE_CONSOLE_USER=billy
@@ -174,7 +189,8 @@ CHOICE_CONSOLE_PASS=choose-a-long-password
 
 The kernel runs without any of these. It will simply log actions instead of delivering them.
 If `CHOICE_CONSOLE_USER` and `CHOICE_CONSOLE_PASS` are set, every route except `/api/health`
-requires Basic Auth. This is mandatory before exposing the console through a tunnel.
+and `/webhooks/twilio` requires Basic Auth. This is mandatory before exposing the console
+through a tunnel.
 
 ---
 

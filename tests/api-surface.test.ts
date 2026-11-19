@@ -27,6 +27,10 @@ test("every JSON endpoint answers on a fresh kernel", async () => {
     await json(await fetch(`${base}/api/policy`));
     await json(await fetch(`${base}/api/metrics`));
     await json(await fetch(`${base}/api/events?limit=5`));
+    const setup = await json(await fetch(`${base}/api/setup/status`));
+    assert.equal(setup.checklist.length, 6);
+    assert.equal(typeof setup.channels.sms, "boolean");
+    assert.equal(setup.counts.contacts, 16);
 
     const dana = state.contacts.find((c: { name: string }) => c.name === "Dana Whitfield");
     const priya = state.contacts.find((c: { name: string }) => c.name === "Priya Raman");
@@ -120,6 +124,21 @@ test("every JSON endpoint answers on a fresh kernel", async () => {
 
     const html = await (await fetch(`${base}/`)).text();
     assert.match(html, /Choice OS/);
+
+    const before = (await json(await fetch(`${base}/api/state`))).contacts.length;
+    const webhook = await fetch(`${base}/webhooks/twilio`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        From: "+1 303-555-0199",
+        Body: "My roof is leaking. Can you come look?",
+        MessageSid: "SM_TEST_INBOUND",
+      }).toString(),
+    });
+    assert.equal(webhook.status, 200);
+    assert.match(await webhook.text(), /<Response>/);
+    const after = (await json(await fetch(`${base}/api/state`))).contacts.length;
+    assert.equal(after, before + 1);
   } finally {
     await server.close();
     await rm(dir, { recursive: true, force: true });

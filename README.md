@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/BillyBull2020/bio2026/actions/workflows/ci.yml/badge.svg)](https://github.com/BillyBull2020/bio2026/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/badge/node-24%2B-5FA04E)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/tests-56-61c88f)](tests)
+[![Tests](https://img.shields.io/badge/tests-62-61c88f)](tests)
 [![License](https://img.shields.io/badge/license-source--available-dfa64c)](LICENSE)
 
 **The AI revenue operating system for service businesses.** It answers the phone, works the
@@ -193,7 +193,7 @@ bio2026/
 │   ├── api/          server.ts (JSON + SSE + static console)
 │   └── cli.ts        demo, serve, simulate, seed, verify, reset
 ├── public/           index.html, styles.css, app.js
-├── tests/            56 tests across field, policy, scheduler, kernel, sim, tools, Hermes, API
+├── tests/            62 tests across field, policy, scheduler, kernel, sim, tools, Hermes, API
 ├── docs/             architecture, science, migration, results, deployment
 └── data/             events.jsonl (created on first run)
 ```
@@ -222,9 +222,10 @@ export async function POST(req: Request) {
 }
 ```
 
-Then keep Twilio, Stripe, Supabase and Gemini Live as **tools** behind the kernel. They are
-transport and persistence, not the brain. [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) has the
-full cutover plan and the shadow-mode rollout.
+Twilio and Resend are **delivery adapters**; Stripe, Supabase and a voice provider are tools
+behind the kernel. They are transport and persistence, not the brain.
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) has the full cutover plan and the shadow-mode
+rollout.
 
 ---
 
@@ -256,14 +257,70 @@ Full rationale and the integration contract: [`docs/TOOLING.md`](docs/TOOLING.md
 
 ---
 
+## Sell it
+
+- [`docs/PILOT-OFFER.md`](docs/PILOT-OFFER.md) — the 30-day revenue recovery pilot, price,
+  guarantee, data requirements, and what we will not do.
+- [`docs/DEMO-SCRIPT.md`](docs/DEMO-SCRIPT.md) — the 7-minute demo, with objection handling.
+- [`docs/COMPETITIVE.md`](docs/COMPETITIVE.md) — positioning against lead marketplaces,
+  answering services, CRMs, AI SDRs and in-house CSRs.
+
+---
+
+## Connect real delivery (pilot)
+
+Copy [`.env.example`](.env.example) and set:
+
+```powershell
+$env:CHOICE_CONSOLE_USER="biodynamx"
+$env:CHOICE_CONSOLE_PASS="a-long-password"
+$env:CHOICE_PUBLIC_URL="https://os.yourdomain.com"
+
+# SMS
+$env:TWILIO_ACCOUNT_SID="AC..."
+$env:TWILIO_AUTH_TOKEN="..."
+$env:TWILIO_FROM="+13035550100"
+
+# Email
+$env:RESEND_API_KEY="re_..."
+$env:RESEND_FROM="Ray <ray@yourdomain.com>"
+
+node src/cli.ts serve --host 0.0.0.0 --port 4177
+```
+
+Then point the Twilio phone number's **A message comes in** webhook at:
+
+```text
+https://os.yourdomain.com/webhooks/twilio   POST
+```
+
+The webhook verifies `X-Twilio-Signature` when `TWILIO_AUTH_TOKEN` is set, matches the sender
+to a contact, records the reply, and returns TwiML. A voice status callback to the same URL
+records `no-answer`, `busy`, `failed` and `canceled` as missed calls.
+
+Import a real customer list — consent is never invented:
+
+```powershell
+node src/cli.ts import-csv --file customers.csv
+```
+
+Recognized columns include `first_name`, `last_name`, `email`, `phone`, `company`, `city`,
+`state`, `trade`, `ticket`, `last_service`, `consent_sms`, `consent_email`, `consent_voice`
+and `consent_source`. Rows without consent are imported with a zero pressure budget and
+`needs_consent`; the scheduler waits.
+
+The console's **Go-live checklist** reads `/api/setup/status` and shows exactly what is still
+missing: Twilio, Resend, contacts, consent, claims, Hermes.
+
+---
+
 ## Honest limitations
 
 - **The simulation is synthetic.** It is a decision aid, not evidence. The pilot design in
   `docs/RESULTS.md` is the evidence.
-- **No telephony or CRM connector ships here.** The kernel emits the action and the message;
-  delivery is an adapter. A provider-neutral webhook (`CHOICE_WEBHOOK_URL`) is included so you
-  can wire Twilio, Resend, n8n or Zapier without changing the kernel. This is deliberate: the
-  rails are testable without a Twilio bill.
+- **Twilio SMS, Resend email and a generic webhook ship as delivery adapters.** Calendar
+  holds, inbound email and CRM sync are not connected yet; `calendar_hold` stays blocked
+  without real slots. The kernel still owns the policy gate.
 - **No LLM is required.** Copy is deterministic and claim-bound. A model can be added as a
   rewriter, but it cannot add numbers, deadlines or guarantees. That is a feature.
 - **State is a JSONL event log + in-memory index.** Fine for a single tenant and tens of

@@ -8,6 +8,7 @@ const S = {
   data: null,
   business: null,
   hermes: null,
+  setup: null,
   view: "business",
   selectedId: null,
   detail: null,
@@ -118,6 +119,7 @@ async function boot() {
     renderAll();
     if (S.business) renderBusiness(S.business);
     loadHermesStatus();
+    loadSetupStatus();
     const first = S.data.contacts.find((c) => c.name === "Dana Whitfield") ?? S.data.contacts[0];
     if (first) await selectContact(first.id);
     await loadEvents();
@@ -193,8 +195,8 @@ function renderBusiness(b) {
     : `<div class="sim-placeholder" style="padding:16px">No open decisions. Press “Run my day” or add contacts.</div>`;
 
   $("#owner-note").textContent = b.connected.delivery
-    ? "Delivery is connected. “Run my day” sends through your webhook, after every rail passes."
-    : "Demo mode: decisions are logged, not delivered. Set CHOICE_WEBHOOK_URL to send through Twilio/Resend.";
+    ? "Delivery is connected. “Run my day” sends through Twilio or Resend, after every rail passes."
+    : "Demo mode: decisions are logged, not delivered. Add Twilio or Resend — see .env.example.";
 }
 
 /* ── Hermes ops analyst ───────────────────────────────────── */
@@ -210,6 +212,28 @@ async function loadHermesStatus() {
   } catch {
     el.textContent = "unavailable";
     el.style.color = "#ef4444";
+  }
+}
+
+async function loadSetupStatus() {
+  const grid = $("#setup-grid");
+  const next = $("#setup-next");
+  if (!grid || !next) return;
+  try {
+    const setup = await api("/api/setup/status");
+    S.setup = setup;
+    next.textContent = setup.next ? `next: ${setup.next.label}` : "ready to run";
+    next.style.color = setup.next ? "#d9b45b" : "#34d399";
+    grid.innerHTML = setup.checklist
+      .map(
+        (item) => `<div class="setup-item ${item.ready ? "ready" : ""}">
+          <span class="setup-dot"></span>
+          <div><b>${esc(item.label)}</b><span>${esc(item.detail)}</span></div>
+        </div>`,
+      )
+      .join("");
+  } catch {
+    next.textContent = "unavailable";
   }
 }
 

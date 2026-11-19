@@ -12,6 +12,7 @@ import { startServer } from "./api/server.ts";
 import { runSimulation } from "./sim/engine.ts";
 import { readiness, deriveStage } from "./neuro/field.ts";
 import { TOOLS, listTools, toolById } from "./tools/registry.ts";
+import { importContactsFromCsv } from "./tools/csv.ts";
 
 const ROOT = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const DATA = join(ROOT, "data");
@@ -175,6 +176,25 @@ async function commandImportSellbird(): Promise<void> {
   console.log(`\n${out.warning}\n`);
 }
 
+async function commandImportCsv(): Promise<void> {
+  const file = flag("file");
+  if (!file) {
+    console.error("Usage: node src/cli.ts import-csv --file customers.csv");
+    process.exitCode = 1;
+    return;
+  }
+  await ensureData();
+  const store = new KernelStore({ tenant: DEFAULT_TENANT, dataDir: DATA, claims: SEED_CLAIMS, settings: DEFAULT_SETTINGS });
+  const text = await readFile(file, "utf8");
+  const summary = importContactsFromCsv(store, text, new Date().toISOString());
+  console.log(`\nImported ${summary.imported} contacts`);
+  console.log(`  with consent:    ${summary.withConsent}`);
+  console.log(`  without consent: ${summary.withoutConsent} (zero pressure, scheduler waits)`);
+  console.log(`  skipped:         ${summary.skippedExisting} existing, ${summary.skippedNoContact} without email/phone`);
+  console.log(`  contact ids:     ${summary.contacts.join(", ")}`);
+  console.log(`\nNext: node src/cli.ts verify\n`);
+}
+
 async function commandProofVideo(): Promise<void> {
   const contactId = flag("contact");
   if (!contactId) {
@@ -218,6 +238,9 @@ switch (command) {
     break;
   case "import-sellbird":
     await commandImportSellbird();
+    break;
+  case "import-csv":
+    await commandImportCsv();
     break;
   case "proof-video":
     await commandProofVideo();

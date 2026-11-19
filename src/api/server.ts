@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { extname, join, normalize, resolve } from "node:path";
@@ -12,7 +13,7 @@ import { ROLES, VOICE_SKINS } from "../roles/registry.ts";
 import { MOVES } from "../neuro/moves.ts";
 import { DIMENSIONS, DIMENSION_META } from "../neuro/types.ts";
 import { llmConfigFromEnv, rewriteMessage } from "../llm/gateway.ts";
-import { deliverAction, deliveryConfigFromEnv } from "../tools/delivery.ts";
+import { deliverAction, deliveryChannels, deliveryConfigFromEnv } from "../tools/delivery.ts";
 import { askHermes, hermesStatus, type OpsSnapshot } from "../tools/hermes.ts";
 
 const ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
@@ -49,15 +50,31 @@ function send(res: ServerResponse, status: number, body: unknown): void {
 }
 
 async function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(chunk as Buffer);
-  if (chunks.length === 0) return {};
-  const raw = Buffer.concat(chunks).toString("utf8");
+  const raw = await readRawBody(req);
+  if (!raw) return {};
   try {
-    return JSON.parse(raw) as Record<string, unknown>;
+    const parsed = JSON.parse(raw) as unknown;
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
   } catch {
     return {};
   }
+}
+
+async function readRawBody(req: IncomingMessage): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) chunks.push(chunk as Buffer);
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+function xmlEscape(value: string): string {
+  return value.replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" }[c]!));
+}
+
+function twilioSignature(url: string, params: URLSearchParams, authToken: string): string {
+  const sorted = [...params.entries()].sort(([a], [b]) => a.localeCompare(b));
+  let data = url;
+  for (const [key, value] of sorted) data += key + value;
+  return createHmac("sha1", authToken).update(data).digest("base64");
 }
 
 function safePath(urlPath: string): string | null {
@@ -91,7 +108,7 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
 
     const authUser = process.env.CHOICE_CONSOLE_USER;
     const authPass = process.env.CHOICE_CONSOLE_PASS;
-    if (authUser && authPass && path !== "/api/health") {
+    if (authUser && authPass && path !== "/api/health" && !path.startsWith("/webhooks/")) {
       const expected = `Basic ${Buffer.from(`${authUser}:${authPass}`).toString("base64")}`;
       if (req.headers.authorization !== expected) {
         res.writeHead(401, { "www-authenticate": 'Basic realm="BioDynamX Choice OS"' });
@@ -530,6 +547,100 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
           },
           results: enriched,
         });
+        return;
+      }
+
+      if (path === "/api/setup/status") {
+        const channels = deliveryChannels();
+        const contacts = store.contacts();
+        const consented = contacts.filter((c) => c.consent.some((x) => x.granted)).length;
+        const claims = store.claims.length;
+        const hermes = hermesStatus();
+        const checklist = [
+          { id: "twilio", label: "Twilio SMS", ready: channels.sms, detail: channels.sms ? "Configured" : "Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM" },
+          { id: "resend", label: "Resend email", ready: channels.email, detail: channels.email ? "Configured" : "Add RESEND_API_KEY and RESEND_FROM" },
+          { id: "contacts", label: "Customer list", ready: contacts.length > 0, detail: `${contacts.length} contacts` },
+          { id: "consent", label: "Consent records", ready: consented > 0, detail: `${consented} contacts with consent` },
+          { id: "claims", label: "Claim registry", ready: claims > 0, detail: `${claims} claims` },
+          { id: "hermes", label: "Hermes ops analyst", ready: hermes.available, detail: hermes.available ? `${hermes.model} · ${hermes.provider}` : "Install Hermes" },
+        ];
+        send(res, 200, {
+          channels: { ...channels, calendar: Boolean(process.env.CALENDAR_WEBHOOK_URL) },
+          counts: { contacts: contacts.length, consented, claims, actions: store.state.actions.length, bookings: store.state.bookings.length },
+          hermes,
+          publicUrl: process.env.CHOICE_PUBLIC_URL ?? "http://127.0.0.1:4177",
+          checklist,
+          next: checklist.find((x) => !x.ready) ?? null,
+        });
+        return;
+      }
+
+      if (path === "/webhooks/twilio" && method === "POST") {
+        const raw = await readRawBody(req);
+        const params = new URLSearchParams(raw);
+        const authToken = process.env.TWILIO_AUTH_TOKEN;
+        if (authToken) {
+          const publicBase = (process.env.CHOICE_PUBLIC_URL ?? `https://${req.headers.host}`).replace(/\/$/, "");
+          const signedUrl = `${publicBase}${req.url ?? path}`;
+          const expected = twilioSignature(signedUrl, params, authToken);
+          const received = String(req.headers["x-twilio-signature"] ?? "");
+          const a = Buffer.from(expected);
+          const b = Buffer.from(received);
+          if (a.length !== b.length || !timingSafeEqual(a, b)) {
+            res.writeHead(403, { "content-type": "text/plain" });
+            res.end("invalid Twilio signature");
+            return;
+          }
+        }
+
+        const now = new Date().toISOString();
+        const from = params.get("From") ?? "";
+        const body = (params.get("Body") ?? "").trim();
+        const callStatus = params.get("CallStatus") ?? "";
+        const fromDigits = from.replace(/\D/g, "");
+        const contact = store.contacts().find((c) => {
+          const digits = c.phone.replace(/\D/g, "");
+          return digits && (digits === fromDigits || digits.slice(-10) === fromDigits.slice(-10));
+        });
+
+        let resolved = contact;
+        if (!resolved && fromDigits) {
+          resolved = store.createContact(
+            {
+              firstName: "Inbound",
+              lastName: fromDigits.slice(-4),
+              company: "Unknown caller",
+              city: store.state.tenant.city,
+              phone: from,
+              email: "",
+              channelPreference: "sms",
+              tags: ["inbound", "needs_name"],
+              notes: "Created by the Twilio inbound webhook. Name and consent are missing.",
+            },
+            now,
+          );
+          store.recordSignal(resolved.id, "inbound_call", now, "twilio", "inbound message");
+        }
+
+        if (resolved && !body) {
+          if (["no-answer", "busy", "failed", "canceled"].includes(callStatus)) {
+            store.recordSignal(resolved.id, "missed_call", now, "twilio", `call ${callStatus}`);
+          }
+          res.writeHead(200, { "content-type": "text/xml" });
+          res.end("<Response/>");
+          return;
+        }
+
+        if (!resolved) {
+          res.writeHead(200, { "content-type": "text/xml" });
+          res.end("<Response/>");
+          return;
+        }
+
+        const result = conductor.handleReply(resolved.id, body || "(missed call)", now, "sms");
+        const reply = result?.reply?.trim() || "Got it. A person will follow up shortly.";
+        res.writeHead(200, { "content-type": "text/xml; charset=utf-8" });
+        res.end(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>${xmlEscape(reply)}</Message></Response>`);
         return;
       }
 
