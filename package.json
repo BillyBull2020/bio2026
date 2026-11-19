@@ -1,0 +1,31 @@
+{
+  "name": "bio2026",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "BioDynamX Choice OS — an operating system for ethical, decision-state-driven revenue conversations.",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node src/cli.ts serve",
+    "dev": "node src/cli.ts serve --port 4177",
+    "demo": "node src/cli.ts demo",
+    "simulate": "node src/cli.ts simulate",
+    "tools": "node src/cli.ts tools",
+    "import-sellbird": "node src/cli.ts import-sellbird",
+    "proof-video": "node src/cli.ts proof-video",
+    "test": "node --test \"tests/**/*.test.ts\"",
+    "verify": "node src/cli.ts verify",
+    "reset": "node src/cli.ts reset"
+  },
+  "keywords": [
+    "ai-operating-system",
+    "decision-science",
+    "neuroscience",
+    "agents",
+    "crm",
+    "conversation"
+  ],
+  "license": "UNLICENSED"
+}

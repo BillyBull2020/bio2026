@@ -1,0 +1,9 @@
+node_modules/
+data/events.jsonl
+data/proofs/
+data/snapshot.json
+*.log
+server.out.log
+server.err.log
+.DS_Store
+Thumbs.db

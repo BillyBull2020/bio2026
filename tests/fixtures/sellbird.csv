@@ -1,0 +1,4 @@
+email,first_name,last_name,company_name,title,website,linkedin_url,industry,personalization,email_status,score,seniority,source,status,created_at
+"mike@northpeakroofing.test","Mike","Okafor","North Peak Roofing","Owner","https://northpeak.example","","roofing","Hail damage season; 6 crews","verified",87,"owner","maps","new","2026-11-18"
+"sarah@frontrangehvac.test","Sarah","Lindqvist","Front Range HVAC","GM","https://frontrangehvac.example","","hvac","No after-hours coverage","verified",74,"gm","web","new","2026-11-18"
+,"No","Email","Example Co","Ops","","","roofing","","unknown",0,"","web","new","2026-11-18"
