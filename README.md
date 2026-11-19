@@ -168,7 +168,7 @@ bio2026/
 │   ├── api/          server.ts (JSON + SSE + static console)
 │   └── cli.ts        demo, serve, simulate, seed, verify, reset
 ├── public/           index.html, styles.css, app.js
-├── tests/            44 tests across field, policy, scheduler, kernel, sim, API
+├── tests/            49 tests across field, policy, scheduler, kernel, sim, tools, API
 ├── docs/             architecture, science, migration, results, deployment
 └── data/             events.jsonl (created on first run)
 ```
@@ -235,7 +235,8 @@ Full rationale and the integration contract: [`docs/TOOLING.md`](docs/TOOLING.md
   rewriter, but it cannot add numbers, deadlines or guarantees. That is a feature.
 - **State is a JSONL event log + in-memory index.** Fine for a single tenant and tens of
   thousands of events; move to Postgres when you need concurrent writers and row-level
-  security.
+  security. One process should own the data directory. If the CLI importer writes while the
+  server is running, call `POST /api/reload` (or restart) before reading.
 - **The neuroscience is a design language, not a measurement.** We model resources and
   update them from evidence. We do not claim to read neurotransmitters. Read
   [`docs/THE-SCIENCE.md`](docs/THE-SCIENCE.md) for the constructs, the citations and the
