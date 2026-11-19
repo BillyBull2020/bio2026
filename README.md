@@ -268,6 +268,10 @@ Full rationale and the integration contract: [`docs/TOOLING.md`](docs/TOOLING.md
   reviews, data and incident response.
 - [`docs/BILLING.md`](docs/BILLING.md) — pricing, Stripe links, the close sequence, unit
   economics and when to raise the price.
+- [`docs/SALES-EMAILS.md`](docs/SALES-EMAILS.md) — warm/cold emails, the 60-second call,
+  voicemail, the close and the referral ask.
+- [`docs/90-DAY-PLAN.md`](docs/90-DAY-PLAN.md) — the week-by-week plan, scorecard and risk
+  responses.
 
 ---
 
