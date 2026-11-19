@@ -73,6 +73,35 @@ The checklist is live: Twilio, Resend, calendar, customer list, consent, claims,
 
 ---
 
+## The Operator tab: Hermes with a job
+
+The **Operator** tab is where Hermes stops being a reporter and starts doing work:
+
+- **Find prospects** — researches local businesses with sources; no invented emails.
+- **Social calendar** — drafts five posts.
+- **Sales sequence** — drafts three emails.
+- **CRM audit** — finds duplicates, consent gaps and stale records.
+- **Send email** — drafts, then sends through Resend only after you approve.
+- **Publish social** — drafts, then posts through your social webhook only after you approve.
+
+Drafts are free. Sends and public posts stop at **Approve**. If Resend or the social webhook is
+not configured, approval returns an error; it never pretends to send.
+
+The four operator skills are installed in Hermes: `prospect-research`, `social-calendar`,
+`sales-sequence`, `crm-hygiene`. Add business systems as MCP servers, not new agents:
+
+```powershell
+hermes mcp install airtable
+hermes mcp install close
+hermes mcp install klaviyo
+hermes mcp install notion
+hermes mcp install stripe
+```
+
+Full detail: [`docs/OPERATOR.md`](docs/OPERATOR.md).
+
+---
+
 ## The Kernel tab: what you are looking at
 
 ### 1. Portfolio (left)

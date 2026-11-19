@@ -106,11 +106,10 @@ async function sendTwilio(
   }
 }
 
-async function sendResend(
-  action: ActionRecord,
-  contact: Contact,
+export async function sendEmailMessage(
   config: ResendConfig,
-  timeoutMs: number,
+  input: { to: string; subject: string; text: string },
+  timeoutMs = 8_000,
 ): Promise<DeliveryResult> {
   const base = config.baseUrl ?? "https://api.resend.com";
   try {
@@ -120,22 +119,34 @@ async function sendResend(
         authorization: `Bearer ${config.apiKey}`,
         "content-type": "application/json",
       },
-      body: JSON.stringify({
-        from: config.from,
-        to: contact.email,
-        subject: action.subject ?? "A note from your contractor",
-        text: action.body,
-      }),
+      body: JSON.stringify({ from: config.from, to: input.to, subject: input.subject, text: input.text }),
       signal: AbortSignal.timeout(timeoutMs),
     });
     const payload = (await response.json().catch(() => ({}))) as { id?: string; message?: string };
     if (!response.ok) {
       return { ok: false, provider: "resend", status: response.status, error: payload.message ?? `Resend returned ${response.status}` };
     }
-    return { ok: true, provider: "resend", status: response.status, id: payload.id, to: contact.email };
+    return { ok: true, provider: "resend", status: response.status, id: payload.id, to: input.to };
   } catch (error) {
     return { ok: false, provider: "resend", error: error instanceof Error ? error.message : "Resend send failed" };
   }
+}
+
+async function sendResend(
+  action: ActionRecord,
+  contact: Contact,
+  config: ResendConfig,
+  timeoutMs: number,
+): Promise<DeliveryResult> {
+  return sendEmailMessage(
+    config,
+    {
+      to: contact.email,
+      subject: action.subject ?? "A note from your contractor",
+      text: action.body,
+    },
+    timeoutMs,
+  );
 }
 
 export async function deliverAction(

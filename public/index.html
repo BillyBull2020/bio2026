@@ -39,7 +39,8 @@
   <nav class="viewbar" aria-label="Views">
     <button class="view-tab active" data-view="business">Business</button>
     <button class="view-tab" data-view="kernel">Kernel</button>
-    <span class="view-hint">Business is the product. Kernel is the engine.</span>
+    <button class="view-tab" data-view="operator">Operator</button>
+    <span class="view-hint">Business is the product. Kernel is the engine. Operator runs the work.</span>
   </nav>
 
   <section id="business-view" class="view active" aria-label="Business">
@@ -232,6 +233,38 @@
     </div>
   </section>
 
+  </div>
+
+  <div id="operator-view" class="view">
+    <section class="operator-head panel">
+      <div>
+        <span class="eyebrow">Hermes · operator</span>
+        <h2>Give Hermes a job, not a prompt.</h2>
+        <p>Research prospects, draft a social calendar, write a sales sequence, audit the CRM. Sends and posts stop for your approval.</p>
+      </div>
+      <div class="operator-status" id="operator-status">checking…</div>
+    </section>
+
+    <div class="operator-grid">
+      <section class="panel operator-compose">
+        <div class="panel-head"><h2>New task</h2><span class="mono">drafts are free · sends need approval</span></div>
+        <div class="op-types" id="op-types"></div>
+        <textarea id="op-prompt" rows="7" placeholder="Example: Find 15 roofing companies in Aurora, CO with a website but no online booking. Return the table and the best 3 to call."></textarea>
+        <div class="op-fields" id="op-fields"></div>
+        <div class="op-actions">
+          <button class="btn primary" id="op-run">Run task</button>
+          <span class="mono" id="op-note">Hermes reads the web; it cannot send without you.</span>
+        </div>
+      </section>
+
+      <section class="panel operator-tasks">
+        <div class="panel-head">
+          <h2>Task queue</h2>
+          <button class="btn ghost" id="op-refresh">Refresh</button>
+        </div>
+        <div class="op-list" id="op-list"><div class="sim-placeholder">No tasks yet.</div></div>
+      </section>
+    </div>
   </div>
 
   <footer class="foot">

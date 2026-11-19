@@ -9,6 +9,10 @@ const S = {
   business: null,
   hermes: null,
   setup: null,
+  operatorType: "prospect_research",
+  operatorStatus: null,
+  operatorTasks: [],
+  operatorPoll: null,
   view: "business",
   selectedId: null,
   detail: null,
@@ -215,6 +219,148 @@ async function loadHermesStatus() {
   }
 }
 
+/* ── operator ─────────────────────────────────────────────── */
+
+async function loadOperatorStatus() {
+  try {
+    const status = await api("/api/operator/status");
+    S.operatorStatus = status;
+    const el = $("#operator-status");
+    if (el) {
+      el.innerHTML = `${esc(status.hermes.model)}<br>${esc(status.hermes.provider)} · email ${status.email.configured ? "ready" : "not connected"} · social ${status.social.configured ? "ready" : "not connected"}`;
+    }
+    renderOperatorTypes(status.types ?? []);
+  } catch (err) {
+    const el = $("#operator-status");
+    if (el) el.textContent = `unavailable: ${err.message}`;
+  }
+}
+
+function renderOperatorTypes(types) {
+  const el = $("#op-types");
+  if (!el) return;
+  if (!types.length) {
+    el.innerHTML = `<div class="op-empty">Operator unavailable.</div>`;
+    return;
+  }
+  if (!types.some((t) => t.id === S.operatorType)) S.operatorType = types[0].id;
+  el.innerHTML = types
+    .map(
+      (t) => `<button class="op-type ${t.id === S.operatorType ? "active" : ""}" data-op-type="${t.id}">
+        <b>${esc(t.label)}</b><span>${esc(t.description)}</span>
+      </button>`,
+    )
+    .join("");
+  renderOperatorFields();
+}
+
+function renderOperatorFields() {
+  const el = $("#op-fields");
+  if (!el) return;
+  if (S.operatorType === "send_email") {
+    el.innerHTML = `<input id="op-to" type="email" placeholder="Recipient email" />
+      <input id="op-subject" type="text" placeholder="Subject" />`;
+  } else if (S.operatorType === "social_publish") {
+    el.innerHTML = `<input id="op-platforms" type="text" placeholder="Platforms (facebook, instagram, linkedin)" value="facebook, instagram" />`;
+  } else {
+    el.innerHTML = "";
+  }
+}
+
+async function loadOperatorTasks() {
+  try {
+    const data = await api("/api/operator/tasks");
+    S.operatorTasks = data.tasks ?? [];
+    renderOperatorTasks();
+    const active = S.operatorTasks.some((t) => t.status === "queued" || t.status === "running");
+    if (active && !S.operatorPoll) {
+      S.operatorPoll = setTimeout(async () => {
+        S.operatorPoll = null;
+        await loadOperatorTasks();
+      }, 4000);
+    }
+  } catch (err) {
+    const el = $("#op-list");
+    if (el) el.innerHTML = `<div class="op-empty">${esc(err.message)}</div>`;
+  }
+}
+
+function renderOperatorTasks() {
+  const el = $("#op-list");
+  if (!el) return;
+  if (!S.operatorTasks.length) {
+    el.innerHTML = `<div class="op-empty">No tasks yet. Start with prospect research or a social calendar.</div>`;
+    return;
+  }
+  const label = (type) => (S.operatorStatus?.types ?? []).find((t) => t.id === type)?.label ?? type;
+  el.innerHTML = S.operatorTasks
+    .map(
+      (t) => `<article class="op-card" data-id="${esc(t.id)}">
+        <div class="op-card-head">
+          <b>${esc(label(t.type))}</b>
+          <span class="op-status ${esc(t.status)}">${esc(t.status.replace("_", " "))}</span>
+        </div>
+        <p class="op-prompt">${esc(t.prompt)}</p>
+        ${t.error ? `<p class="op-status failed">${esc(t.error)}</p>` : ""}
+        ${t.output ? `<pre class="op-output">${esc(t.output)}</pre>` : ""}
+        ${t.status === "needs_approval" ? `<div class="op-card-actions">
+          <button class="primary" data-op-approve="${esc(t.id)}">Approve &amp; ${t.type === "send_email" ? "send" : "publish"}</button>
+          <button class="danger" data-op-reject="${esc(t.id)}">Reject</button>
+        </div>` : ""}
+      </article>`,
+    )
+    .join("");
+}
+
+async function runOperatorTask() {
+  const prompt = $("#op-prompt")?.value?.trim();
+  const btn = $("#op-run");
+  if (!prompt || btn?.disabled) return;
+  btn.disabled = true;
+  const old = btn.textContent;
+  btn.textContent = "Queuing…";
+  try {
+    const payload = { type: S.operatorType, prompt };
+    if (S.operatorType === "send_email") {
+      payload.to = $("#op-to")?.value?.trim();
+      payload.subject = $("#op-subject")?.value?.trim();
+      if (!payload.to || !payload.subject) throw new Error("Recipient and subject are required.");
+    }
+    if (S.operatorType === "social_publish") {
+      payload.platforms = ($("#op-platforms")?.value ?? "facebook, instagram").split(",").map((s) => s.trim()).filter(Boolean);
+    }
+    await api("/api/operator/tasks", { method: "POST", body: JSON.stringify(payload) });
+    $("#op-prompt").value = "";
+    toast("Task queued. Hermes is working.", "good");
+    await loadOperatorTasks();
+  } catch (err) {
+    toast(err.message, "bad");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = old;
+  }
+}
+
+async function approveOperatorTask(id) {
+  try {
+    const result = await api(`/api/operator/tasks/${id}/approve`, { method: "POST", body: "{}" });
+    toast(result.delivery?.ok ? "Approved and delivered." : "Approved.", "good");
+    await loadOperatorTasks();
+  } catch (err) {
+    toast(err.message, "bad");
+  }
+}
+
+async function rejectOperatorTask(id) {
+  try {
+    await api(`/api/operator/tasks/${id}/reject`, { method: "POST", body: "{}" });
+    toast("Task rejected. Nothing was sent.", "good");
+    await loadOperatorTasks();
+  } catch (err) {
+    toast(err.message, "bad");
+  }
+}
+
 async function loadSetupStatus() {
   const grid = $("#setup-grid");
   const next = $("#setup-next");
@@ -305,6 +451,10 @@ function switchView(view) {
   S.view = view;
   $$(".view").forEach((v) => v.classList.toggle("active", v.id === `${view}-view`));
   $$(".view-tab").forEach((t) => t.classList.toggle("active", t.dataset.view === view));
+  if (view === "operator") {
+    loadOperatorStatus();
+    loadOperatorTasks();
+  }
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -816,6 +966,18 @@ document.addEventListener("click", (event) => {
 
   const hermesQuick = event.target.closest?.(".hermes-quick button");
   if (hermesQuick?.dataset.prompt) askHermes(hermesQuick.dataset.prompt);
+
+  const opType = event.target.closest?.(".op-type");
+  if (opType?.dataset.opType) {
+    S.operatorType = opType.dataset.opType;
+    renderOperatorTypes(S.operatorStatus?.types ?? []);
+  }
+
+  const approve = event.target.closest?.("[data-op-approve]");
+  if (approve?.dataset.opApprove) approveOperatorTask(approve.dataset.opApprove);
+
+  const reject = event.target.closest?.("[data-op-reject]");
+  if (reject?.dataset.opReject) rejectOperatorTask(reject.dataset.opReject);
 });
 
 $("#reply-btn")?.addEventListener("click", () => reply($("#reply-input").value));
@@ -825,6 +987,8 @@ $("#reply-input")?.addEventListener("keydown", (event) => {
 $("#tick-btn")?.addEventListener("click", runTick);
 $("#sim-btn")?.addEventListener("click", loadSimulation);
 $("#run-day-btn")?.addEventListener("click", runDay);
+$("#op-run")?.addEventListener("click", runOperatorTask);
+$("#op-refresh")?.addEventListener("click", loadOperatorTasks);
 $("#hermes-btn")?.addEventListener("click", () => askHermes($("#hermes-input")?.value));
 $("#hermes-input")?.addEventListener("keydown", (event) => {
   if (event.key === "Enter") askHermes($("#hermes-input")?.value);

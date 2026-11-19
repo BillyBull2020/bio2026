@@ -14,9 +14,12 @@ import { ROLES, VOICE_SKINS } from "../roles/registry.ts";
 import { MOVES } from "../neuro/moves.ts";
 import { DIMENSIONS, DIMENSION_META } from "../neuro/types.ts";
 import { llmConfigFromEnv, rewriteMessage } from "../llm/gateway.ts";
-import { deliverAction, deliveryChannels, deliveryConfigFromEnv } from "../tools/delivery.ts";
+import { deliverAction, deliveryChannels, deliveryConfigFromEnv, sendEmailMessage } from "../tools/delivery.ts";
 import { askHermes, hermesStatus, type OpsSnapshot } from "../tools/hermes.ts";
 import { calendarConfigFromEnv, getAvailableSlots, slotFacts, type CalendarConfig, type SlotFacts } from "../tools/calendar.ts";
+import { publishSocial, socialConfigFromEnv } from "../tools/social.ts";
+import { createOperatorTask, getOperatorTask, listOperatorTasks, updateOperatorTask } from "../operator/store.ts";
+import { OPERATOR_TYPES, runOperatorTask } from "../operator/runner.ts";
 
 const ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
 const PUBLIC = join(ROOT, "public");
@@ -684,6 +687,143 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
         const reply = result?.reply?.trim() || "Got it. A person will follow up shortly.";
         res.writeHead(200, { "content-type": "text/xml; charset=utf-8" });
         res.end(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>${xmlEscape(reply)}</Message></Response>`);
+        return;
+      }
+
+      if (path === "/api/operator/status") {
+        const social = socialConfigFromEnv();
+        const delivery = deliveryConfigFromEnv();
+        send(res, 200, {
+          types: OPERATOR_TYPES,
+          hermes: hermesStatus(),
+          social: { configured: Boolean(social.url) },
+          email: { configured: Boolean(delivery.resend) },
+        });
+        return;
+      }
+
+      if (path === "/api/operator/tasks" && method === "GET") {
+        send(res, 200, { tasks: await listOperatorTasks() });
+        return;
+      }
+
+      if (path === "/api/operator/tasks" && method === "POST") {
+        const body = await readBody(req);
+        const type = String(body.type ?? "") as (typeof OPERATOR_TYPES)[number]["id"];
+        if (!OPERATOR_TYPES.some((t) => t.id === type)) {
+          send(res, 400, { error: "unknown operator task type" });
+          return;
+        }
+        const prompt = String(body.prompt ?? "").trim();
+        if (!prompt) {
+          send(res, 400, { error: "prompt is required" });
+          return;
+        }
+        if (type === "send_email" && (!body.to || !body.subject)) {
+          send(res, 400, { error: "send_email requires to and subject" });
+          return;
+        }
+        const task = await createOperatorTask({
+          type,
+          prompt,
+          to: body.to ? String(body.to) : undefined,
+          subject: body.subject ? String(body.subject) : undefined,
+          platforms: Array.isArray(body.platforms) ? body.platforms.map(String) : undefined,
+        });
+        void runOperatorTask(task, store.state.tenant).catch(async (error) => {
+          await updateOperatorTask(task.id, {
+            status: "failed",
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+        send(res, 202, { task });
+        return;
+      }
+
+      const operatorMatch = path.match(/^\/api\/operator\/tasks\/([^/]+)(?:\/(approve|reject))?$/);
+      if (operatorMatch) {
+        const task = await getOperatorTask(operatorMatch[1]!);
+        if (!task) {
+          send(res, 404, { error: "task not found" });
+          return;
+        }
+        const action = operatorMatch[2];
+        if (!action && method === "GET") {
+          send(res, 200, { task });
+          return;
+        }
+        if (action === "reject" && method === "POST") {
+          send(res, 200, { task: await updateOperatorTask(task.id, { status: "rejected" }) });
+          return;
+        }
+        if (action === "approve" && method === "POST") {
+          if (task.status !== "needs_approval") {
+            send(res, 400, { error: `task is ${task.status}, not awaiting approval` });
+            return;
+          }
+          if (task.type === "send_email") {
+            const delivery = deliveryConfigFromEnv();
+            if (!delivery.resend) {
+              send(res, 400, { error: "Resend is not configured (RESEND_API_KEY / RESEND_FROM)" });
+              return;
+            }
+            if (!task.meta.to || !task.output) {
+              send(res, 400, { error: "task is missing recipient or body" });
+              return;
+            }
+            const result = await sendEmailMessage(
+              delivery.resend,
+              {
+                to: task.meta.to,
+                subject: task.meta.subject ?? "A note from your contractor",
+                text: task.output,
+              },
+              delivery.timeoutMs,
+            );
+            if (!result.ok) {
+              send(res, 502, { error: result.error ?? "email send failed", task });
+              return;
+            }
+            send(res, 200, {
+              task: await updateOperatorTask(task.id, {
+                status: "approved",
+                meta: { approvedAt: new Date().toISOString(), deliveredAt: new Date().toISOString(), deliveryId: result.id },
+              }),
+              delivery: result,
+            });
+            return;
+          }
+          if (task.type === "social_publish") {
+            const social = socialConfigFromEnv();
+            if (!social.url) {
+              send(res, 400, { error: "SOCIAL_WEBHOOK_URL is not configured" });
+              return;
+            }
+            if (!task.output) {
+              send(res, 400, { error: "task has no post text" });
+              return;
+            }
+            const result = await publishSocial(social, {
+              text: task.output,
+              platforms: task.meta.platforms ?? ["facebook", "instagram"],
+            });
+            if (!result.ok) {
+              send(res, 502, { error: result.error ?? "social publish failed", task });
+              return;
+            }
+            send(res, 200, {
+              task: await updateOperatorTask(task.id, {
+                status: "approved",
+                meta: { approvedAt: new Date().toISOString(), deliveredAt: new Date().toISOString(), deliveryId: result.id },
+              }),
+              delivery: result,
+            });
+            return;
+          }
+          send(res, 200, { task: await updateOperatorTask(task.id, { status: "approved" }) });
+          return;
+        }
+        send(res, 405, { error: "use GET, approve or reject" });
         return;
       }
 

@@ -19,8 +19,9 @@ send (Twilio / Resend)  ·  hold slots (Cal.diy)  ·  hand off to a human
 event log (hash-chained) → metrics → Hermes report → next day
 ```
 
-The kernel is deterministic. It does not “ask an agent what to do.” The only model is Hermes,
-and it is read-only.
+The kernel is deterministic and owns **customer-facing decisions**. Hermes runs the rest of
+the work — research, content, sales ops, reporting — through tools and skills. Sends and public
+posts require approval.
 
 ## Works with no external keys
 
@@ -88,7 +89,7 @@ the safe shadow mode.
 
 Do not promise these in a demo.
 
-## Agents and skills
+## Two Hermes lanes
 
 There are **no autonomous agents** in the customer path. The “roles” are four deterministic
 voices over one kernel:
@@ -100,30 +101,56 @@ voices over one kernel:
 | Advocate | Reviews, referrals, proof | A review-gating bot |
 | Analyst | Reports, proof, owner view | An autonomous researcher |
 
-**Hermes is the only model.** It is read-only. It receives a snapshot, returns text, and cannot
-send, consent, book, run tools or write the log.
+### Assistant lane — read-only snapshot
 
-### Do we need to add skills to Hermes?
+`/api/hermes/ask` receives revenue, bookings, pipeline, missed calls and the top six decisions.
+It returns text. It cannot send, consent, book, run tools or write the log. This is the owner's
+daily brief.
 
-**No, not for the core loop.** The core loop is deterministic code. Hermes is a reporting and
-analysis convenience.
+### Operator lane — real tools, approval boundary
 
-Add a skill only when there is a specific, read-only job:
+`/api/operator/tasks` runs Hermes with:
 
-| Skill | When to add | Risk |
+- **Skills**: `prospect-research`, `social-calendar`, `sales-sequence`, `crm-hygiene`.
+- **Tools**: web research for prospect tasks; MCP servers when configured.
+- **A workspace**: `data/operator/workspace`, not the customer event log.
+- **Approval**: `send_email` uses Resend only after you approve. `social_publish` uses your
+  `SOCIAL_WEBHOOK_URL` only after you approve. Drafts never send.
+
+| Operator task | What it does | Approval |
 |---|---|---|
-| Web research for a lead | When you want a company summary before a call | Citations required; no scraping behind a login; no invented facts |
-| Calendar read | If Hermes must answer “what does next week look like?” | Read-only; never book |
-| Document/report formatting | If the owner wants a PDF weekly report | No customer data leaves the tenant |
-| CRM read | If Hermes must answer “what is in Jobber?” | OAuth scope, read-only, per-tenant |
+| Find prospects | Web research; table with sources; no invented emails | No |
+| Social calendar | 5 posts with hook/body/CTA | No |
+| Sales sequence | 3-email outbound sequence | No |
+| CRM audit | Duplicates, consent gaps, stale records | No |
+| Send email | Draft, then send via Resend | **Yes** |
+| Publish social | Draft, then post via your social webhook | **Yes** |
 
-Do **not** give Hermes the send path, the full contact list, or write tools. That is how you get
-the 15-agent problem back.
+This is the line: **Hermes can think and research with tools; it cannot touch a customer or a
+public account without a human click.**
+
+### MCP and skills
+
+The four operator skills are installed in the Hermes profile. To add a business system, install
+its MCP server, not a new agent:
+
+```powershell
+hermes mcp install airtable      # CRM / ops base
+hermes mcp install close         # sales CRM
+hermes mcp install klaviyo       # email marketing
+hermes mcp install notion        # docs / SOPs
+hermes mcp install stripe        # payments / invoices
+```
+
+Each one needs its own OAuth or API key. Start read-only; add writes only after the workflow is
+tested. Social publishing uses a webhook (n8n, Postiz, Buffer, Make) so the platform credentials
+stay outside the OS. Do not give Hermes a browser logged into X/LinkedIn and call it automation;
+that is how accounts get banned.
 
 ## Test everything
 
 ```powershell
-npm test          # 70 unit/integration tests
+npm test          # 73 unit/integration tests
 npm run selftest  # 9 end-to-end checks with mock Twilio/Resend/Cal.diy
 npm run verify    # hash-chain check on the live data
 ```
@@ -139,4 +166,5 @@ npm run verify    # hash-chain check on the live data
 ## The decision
 
 We do **not** fake actions through Hermes. If the kernel did not authorize it, it did not happen.
-If a provider is not connected, the OS says “skipped,” not “sent.” That is the product.
+If a provider is not connected, the OS says “skipped,” not “sent.” Operator drafts can use real
+tools; operator sends and posts wait for a human approval. That is the product.
