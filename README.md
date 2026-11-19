@@ -168,7 +168,7 @@ bio2026/
 │   ├── api/          server.ts (JSON + SSE + static console)
 │   └── cli.ts        demo, serve, simulate, seed, verify, reset
 ├── public/           index.html, styles.css, app.js
-├── tests/            49 tests across field, policy, scheduler, kernel, sim, tools, API
+├── tests/            51 tests across field, policy, scheduler, kernel, sim, tools, API
 ├── docs/             architecture, science, migration, results, deployment
 └── data/             events.jsonl (created on first run)
 ```
@@ -230,7 +230,9 @@ Full rationale and the integration contract: [`docs/TOOLING.md`](docs/TOOLING.md
 - **The simulation is synthetic.** It is a decision aid, not evidence. The pilot design in
   `docs/RESULTS.md` is the evidence.
 - **No telephony or CRM connector ships here.** The kernel emits the action and the message;
-  delivery is an adapter. This is deliberate: the rails are testable without a Twilio bill.
+  delivery is an adapter. A provider-neutral webhook (`CHOICE_WEBHOOK_URL`) is included so you
+  can wire Twilio, Resend, n8n or Zapier without changing the kernel. This is deliberate: the
+  rails are testable without a Twilio bill.
 - **No LLM is required.** Copy is deterministic and claim-bound. A model can be added as a
   rewriter, but it cannot add numbers, deadlines or guarantees. That is a feature.
 - **State is a JSONL event log + in-memory index.** Fine for a single tenant and tens of

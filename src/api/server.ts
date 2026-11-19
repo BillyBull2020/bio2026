@@ -12,6 +12,7 @@ import { ROLES, VOICE_SKINS } from "../roles/registry.ts";
 import { MOVES } from "../neuro/moves.ts";
 import { DIMENSIONS, DIMENSION_META } from "../neuro/types.ts";
 import { llmConfigFromEnv, rewriteMessage } from "../llm/gateway.ts";
+import { deliverAction, deliveryConfigFromEnv } from "../tools/delivery.ts";
 
 const ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
 const PUBLIC = join(ROOT, "public");
@@ -107,6 +108,7 @@ export async function startServer(options: { port?: number; dataDir?: string } =
           events: store.log.events.length,
           chain: store.log.verify(),
           llm: Boolean(llmConfigFromEnv()),
+          delivery: Boolean(deliveryConfigFromEnv().url),
         });
         return;
       }
@@ -126,6 +128,7 @@ export async function startServer(options: { port?: number; dataDir?: string } =
           claims: SEED_CLAIMS.map((c) => ({ id: c.id, text: c.text, segment: c.segment, expiresAt: c.expiresAt })),
           moves: Object.values(MOVES).map((m) => ({ id: m.id, label: m.label, pressure: m.pressure, system: m.system, intent: m.intent })),
           llm: Boolean(llmConfigFromEnv()),
+          delivery: Boolean(deliveryConfigFromEnv().url),
         });
         return;
       }
@@ -241,10 +244,13 @@ export async function startServer(options: { port?: number; dataDir?: string } =
           send(res, 404, { error: "contact not found" });
           return;
         }
+        const contact = store.getContact(sendMatch[1]);
+        const delivery = result.action && contact ? await deliverAction(result.action, contact) : null;
         send(res, 200, {
           now,
           decision: result.plan.decision,
           action: result.action ?? null,
+          delivery,
           verdict: result.plan.verdict,
           message: result.plan.message,
           blocked: Boolean(result.blocked),
@@ -302,17 +308,22 @@ export async function startServer(options: { port?: number; dataDir?: string } =
         const body = await readBody(req);
         const now = new Date().toISOString();
         const results = conductor.tick(now, Number(body.limit ?? 4));
-        send(res, 200, {
-          now,
-          results: results.map((r) => ({
-            contactId: r.plan.decision.contactId,
-            moveId: r.plan.decision.moveId,
-            channel: r.plan.channel,
-            action: r.action ?? null,
-            blocked: Boolean(r.blocked),
-            whyNow: r.plan.decision.whyNow,
-          })),
-        });
+        const enriched = await Promise.all(
+          results.map(async (r) => {
+            const contact = store.getContact(r.plan.decision.contactId);
+            const delivery = r.action && contact ? await deliverAction(r.action, contact) : null;
+            return {
+              contactId: r.plan.decision.contactId,
+              moveId: r.plan.decision.moveId,
+              channel: r.plan.channel,
+              action: r.action ?? null,
+              delivery,
+              blocked: Boolean(r.blocked),
+              whyNow: r.plan.decision.whyNow,
+            };
+          }),
+        );
+        send(res, 200, { now, results: enriched });
         return;
       }
 

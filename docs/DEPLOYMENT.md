@@ -104,6 +104,24 @@ if (result?.action) {
 }
 ```
 
+### Generic delivery webhook
+
+The fastest path to a real send is a webhook, not a vendor SDK. Set:
+
+```bash
+CHOICE_WEBHOOK_URL=https://your-worker.example/send
+CHOICE_WEBHOOK_TOKEN=optional-bearer
+```
+
+`POST /api/contacts/:id/send` (and `/api/tick`) will deliver the approved `ActionRecord` to
+that URL with `to`, `channel`, `subject`, `body`, `moveId`, `claimIds`, `policyAllowed` and
+the contact identity. The receiver owns Twilio, Resend, or whatever transport you use. If
+the webhook is not configured, the action is still logged and the response says
+`delivery: { ok: false, skipped: true }`. Nothing is silently sent.
+
+This separation is deliberate: the policy gate must run before transport, and the kernel
+must not care which vendor is behind it.
+
 ### Inbound
 
 Twilio webhook → `conductor.handleReply(contactId, text, now, channel)`. The conductor:
