@@ -19,6 +19,9 @@ Nothing is faked: if a provider is absent, the endpoint returns `skipped` or **4
 | **Monday CRM** | Hermes MCP | Accept your invite, then `hermes mcp install monday` + OAuth | `hermes mcp list` |
 | **Hermes operator** | `src/operator/` | Hermes + Ollama/OpenRouter | `GET /api/operator/status` |
 | **Choice OS MCP** | `src/mcp/server.ts` | Hermes MCP client | `hermes mcp test choice-os` |
+| **Sellbird** | external Python app | Run it separately; `sellbird export` CSV | `node src/cli.ts import-sellbird --file ...` |
+| **HyperFrames** | `HyperFramesApp` | Render a proof image/video | `proof-video` manifest → `media-add` |
+| **OpenMausBot** | `C:\Users\billy\OpenMausBot` | Chat UI only; not in customer path | `scripts/mcp-server.ts` if you want a UI bridge |
 | **Hermes MCPs** | Hermes config | OAuth/keys per server | `hermes mcp list` |
 
 ## Environment
@@ -143,6 +146,58 @@ hermes mcp install monday
 Hermes will open the OAuth flow. Once connected, the Operator can read boards and items and,
 after approval, create or update records. Do not paste the invitation token into a repo, a
 prompt, or this console.
+
+## Sellbird, HyperFrames, MausBot
+
+### Sellbird — discovery, not the decision brain
+
+Sellbird is a full outreach platform (AGPL). Do not embed its code in Choice OS. Run it as a
+separate service and take its output:
+
+```powershell
+sellbird dashboard      # local UI
+sellbird run            # heartbeat, if you want it to prospect/send
+sellbird export         # sequencer-ready CSV
+node src/cli.ts import-sellbird --file .\sellbird\exports\prospects.csv
+```
+
+Choice OS imports the CSV as **zero-consent prospects**; the scheduler waits. That is the
+correct boundary for B2B discovery. Sellbird can also expose a **read-only MCP** to a coding
+agent (`sellbird mcp install --print`); its agent token can read pipeline, prospects, outbox
+and usage, but cannot send or approve. Use it to let Hermes see the top of funnel, not to give
+Hermes a second send engine.
+
+### HyperFrames — media, not an agent
+
+HyperFrames renders proof images and short videos. Use the existing proof manifest:
+
+```powershell
+node src/cli.ts proof-video --contact <id>
+```
+
+Render the manifest in HyperFrames, then publish the asset:
+
+```powershell
+npm run media-add -- --file .\renders\proof.mp4
+```
+
+Paste the returned URL into the Operator **Publish social** task. Buffer receives it as a
+`video` asset. HyperFrames does not decide who to contact or what to claim.
+
+### OpenMausBot / MausBot — UI only
+
+OpenMausBot is a local chat app where each sidebar bot is a Claude/Codex agent. It has its own
+memory, tools and MCP server (`scripts/mcp-server.ts`). That is a **second roster of agents**.
+
+Use it, if you want, as a chat front-end. Do not give it the customer list, the send path or the
+event log. If it is running, its MCP can be added to Hermes; otherwise leave it out of the
+revenue path. It is not running on this machine right now.
+
+### Mautic
+
+Mautic is an email marketing platform. Choice OS already has Resend for transactional and
+approved email. Mautic would duplicate consent, segments and journey logic. At most, use it as
+SMTP/segment transport behind a delivery adapter — never as the campaign brain.
 
 ## Test order
 
