@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { rm, mkdir, readFile } from "node:fs/promises";
+import { rm, mkdir, readFile, writeFile } from "node:fs/promises";
 import { networkInterfaces } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -38,9 +38,35 @@ async function ensureData(): Promise<void> {
   await mkdir(DATA, { recursive: true });
 }
 
+async function commandSetupTenant(): Promise<void> {
+  const name = flag("name");
+  if (!name) {
+    console.error('Usage: node src/cli.ts setup-tenant --name "Acme Roofing" [--trade roofing] [--city Denver] [--state CO] [--owner "Ray"] [--phone "+1303..."] [--ticket 14500] [--review URL]');
+    process.exitCode = 1;
+    return;
+  }
+  const tenant = {
+    ...DEFAULT_TENANT,
+    name,
+    trade: flag("trade") ?? DEFAULT_TENANT.trade,
+    city: flag("city") ?? DEFAULT_TENANT.city,
+    state: flag("state") ?? DEFAULT_TENANT.state,
+    ownerName: flag("owner") ?? DEFAULT_TENANT.ownerName,
+    ownerPhone: flag("phone") ?? DEFAULT_TENANT.ownerPhone,
+    avgTicket: Number(flag("ticket") ?? DEFAULT_TENANT.avgTicket),
+    reviewLink: flag("review") ?? DEFAULT_TENANT.reviewLink,
+  };
+  await ensureData();
+  await writeFile(join(DATA, "tenant.json"), `${JSON.stringify(tenant, null, 2)}\n`, "utf8");
+  console.log(`\nTenant configured: ${tenant.name} · ${tenant.city}, ${tenant.state}`);
+  console.log(`  trade: ${tenant.trade} · avg ticket: $${tenant.avgTicket.toLocaleString()} · owner: ${tenant.ownerName}`);
+  console.log(`  written: ${join(DATA, "tenant.json")}`);
+  console.log(`\nNext: node src/cli.ts import-csv --file customers.csv\n`);
+}
+
 async function commandDemo(): Promise<void> {
   const now = new Date().toISOString();
-  const store = new KernelStore({ tenant: DEFAULT_TENANT, claims: SEED_CLAIMS, settings: DEFAULT_SETTINGS, persist: false });
+  const store = new KernelStore({ claims: SEED_CLAIMS, settings: DEFAULT_SETTINGS, persist: false });
   seedDemo(store, now);
   const conductor = new Conductor(store, SEED_CLAIMS, DEFAULT_SETTINGS);
 
@@ -98,7 +124,7 @@ async function commandVerify(): Promise<void> {
     console.log("No event log yet. Run `npm run seed` or `npm run demo` first.");
     return;
   }
-  const store = new KernelStore({ tenant: DEFAULT_TENANT, dataDir: DATA, claims: SEED_CLAIMS, settings: DEFAULT_SETTINGS });
+  const store = new KernelStore({ dataDir: DATA, claims: SEED_CLAIMS, settings: DEFAULT_SETTINGS });
   const result = store.log.verify();
   console.log(JSON.stringify({ ...result, contacts: store.contacts().length }, null, 2));
   if (!result.ok) process.exitCode = 1;
@@ -112,7 +138,7 @@ async function commandReset(): Promise<void> {
 
 async function commandSeed(): Promise<void> {
   await ensureData();
-  const store = new KernelStore({ tenant: DEFAULT_TENANT, dataDir: DATA, claims: SEED_CLAIMS, settings: DEFAULT_SETTINGS });
+  const store = new KernelStore({ dataDir: DATA, claims: SEED_CLAIMS, settings: DEFAULT_SETTINGS });
   if (store.contacts().length > 0) {
     console.log(`Already seeded: ${store.contacts().length} contacts, ${store.log.events.length} events.`);
     return;
@@ -162,7 +188,7 @@ async function commandImportSellbird(): Promise<void> {
     return;
   }
   await ensureData();
-  const store = new KernelStore({ tenant: DEFAULT_TENANT, dataDir: DATA, claims: SEED_CLAIMS, settings: DEFAULT_SETTINGS });
+  const store = new KernelStore({ dataDir: DATA, claims: SEED_CLAIMS, settings: DEFAULT_SETTINGS });
   const tool = toolById("sellbird.import")!;
   const result = await tool.run({ file }, { tenant: store.state.tenant, now: new Date().toISOString(), store });
   if (!result.ok) {
@@ -184,7 +210,7 @@ async function commandImportCsv(): Promise<void> {
     return;
   }
   await ensureData();
-  const store = new KernelStore({ tenant: DEFAULT_TENANT, dataDir: DATA, claims: SEED_CLAIMS, settings: DEFAULT_SETTINGS });
+  const store = new KernelStore({ dataDir: DATA, claims: SEED_CLAIMS, settings: DEFAULT_SETTINGS });
   const text = await readFile(file, "utf8");
   const summary = importContactsFromCsv(store, text, new Date().toISOString());
   console.log(`\nImported ${summary.imported} contacts`);
@@ -203,7 +229,7 @@ async function commandProofVideo(): Promise<void> {
     return;
   }
   await ensureData();
-  const store = new KernelStore({ tenant: DEFAULT_TENANT, dataDir: DATA, claims: SEED_CLAIMS, settings: DEFAULT_SETTINGS });
+  const store = new KernelStore({ dataDir: DATA, claims: SEED_CLAIMS, settings: DEFAULT_SETTINGS });
   const tool = toolById("hyperframes.proof")!;
   const result = await tool.run(
     { contactId, outDir: flag("out", join(DATA, "proofs")) },
@@ -232,6 +258,9 @@ switch (command) {
     break;
   case "seed":
     await commandSeed();
+    break;
+  case "setup-tenant":
+    await commandSetupTenant();
     break;
   case "tools":
     await commandTools();

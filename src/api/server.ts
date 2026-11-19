@@ -3,11 +3,12 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { readFile, stat } from "node:fs/promises";
 import { extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { KernelStore, DEFAULT_TENANT } from "../kernel/store.ts";
+import { KernelStore } from "../kernel/store.ts";
 import { seedDemo } from "../kernel/seed.ts";
 import { SEED_CLAIMS } from "../kernel/claims.ts";
 import { DEFAULT_SETTINGS } from "../kernel/policy.ts";
 import { Conductor } from "../kernel/conductor.ts";
+import { experimentReport } from "../kernel/experiment.ts";
 import { runSimulation } from "../sim/engine.ts";
 import { ROLES, VOICE_SKINS } from "../roles/registry.ts";
 import { MOVES } from "../neuro/moves.ts";
@@ -86,7 +87,6 @@ function safePath(urlPath: string): string | null {
 
 export async function startServer(options: { port?: number; dataDir?: string; host?: string } = {}): Promise<ServerHandle> {
   const store = new KernelStore({
-    tenant: DEFAULT_TENANT,
     dataDir: options.dataDir ?? DATA,
     claims: SEED_CLAIMS,
     settings: DEFAULT_SETTINGS,
@@ -547,6 +547,11 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
           },
           results: enriched,
         });
+        return;
+      }
+
+      if (path === "/api/experiment") {
+        send(res, 200, experimentReport(store));
         return;
       }
 

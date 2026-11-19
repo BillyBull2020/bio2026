@@ -54,15 +54,17 @@ decisions — and writes plain text. It is **read-only**: it cannot send, change
 job, or write to the event log. That is deliberate; it is the owner's chief of staff, not a
 second decision-maker.
 
-### Go live in four steps
+### Go live in five steps
 
-1. Copy `.env.example` and add Twilio + Resend keys, a console password, and
+1. Configure the real business:
+   `node src/cli.ts setup-tenant --name "Acme Roofing" --city "Aurora" --state "CO" --owner "Sam" --phone "+13035550100" --ticket 12000`.
+2. Copy `.env.example` and add Twilio + Resend keys, a console password, and
    `CHOICE_PUBLIC_URL`.
-2. Import the real customer list: `node src/cli.ts import-csv --file customers.csv`. Consent
+3. Import the real customer list: `node src/cli.ts import-csv --file customers.csv`. Consent
    is read per row and never invented.
-3. Point the Twilio number's **A message comes in** webhook at
+4. Point the Twilio number's **A message comes in** webhook at
    `https://your-domain/webhooks/twilio` (POST). Voice status callbacks go to the same URL.
-4. Open **Business** and watch the **Go-live checklist** turn green. The first missing item is
+5. Open **Business** and watch the **Go-live checklist** turn green. The first missing item is
    the next thing to fix.
 
 The checklist is live: Twilio, Resend, customer list, consent, claims, Hermes.

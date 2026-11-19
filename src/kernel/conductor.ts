@@ -8,6 +8,7 @@ import type {
   SignalType,
 } from "../neuro/types.ts";
 import { readiness } from "../neuro/field.ts";
+import { armFor, experimentId, holdoutPercent } from "./experiment.ts";
 import { plan, type PlanResult } from "./scheduler.ts";
 import type { KernelStore } from "./store.ts";
 
@@ -74,6 +75,9 @@ export class Conductor {
   planFor(contactId: string, now: string, options: { roleId?: string; channel?: Channel; initiatedBy?: "system" | "human" | "inbound" } = {}): PlanResult | null {
     const contact = this.store.getContact(contactId);
     if (!contact) return null;
+    if (options.initiatedBy !== "inbound" && armFor(contact.id, holdoutPercent(), experimentId()) === "holdout") {
+      return null;
+    }
     return plan({
       contact,
       now,

@@ -15,6 +15,7 @@
     "tools": "node src/cli.ts tools",
     "import-sellbird": "node src/cli.ts import-sellbird",
     "import-csv": "node src/cli.ts import-csv",
+    "setup-tenant": "node src/cli.ts setup-tenant",
     "proof-video": "node src/cli.ts proof-video",
     "test": "node --test \"tests/**/*.test.ts\"",
     "verify": "node src/cli.ts verify",

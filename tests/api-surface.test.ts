@@ -31,6 +31,8 @@ test("every JSON endpoint answers on a fresh kernel", async () => {
     assert.equal(setup.checklist.length, 6);
     assert.equal(typeof setup.channels.sms, "boolean");
     assert.equal(setup.counts.contacts, 16);
+    const experiment = await json(await fetch(`${base}/api/experiment`));
+    assert.equal(experiment.treatment.contacts + experiment.holdout.contacts, 14);
 
     const dana = state.contacts.find((c: { name: string }) => c.name === "Dana Whitfield");
     const priya = state.contacts.find((c: { name: string }) => c.name === "Priya Raman");

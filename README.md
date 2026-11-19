@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/BillyBull2020/bio2026/actions/workflows/ci.yml/badge.svg)](https://github.com/BillyBull2020/bio2026/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/badge/node-24%2B-5FA04E)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/tests-62-61c88f)](tests)
+[![Tests](https://img.shields.io/badge/tests-67-61c88f)](tests)
 [![License](https://img.shields.io/badge/license-source--available-dfa64c)](LICENSE)
 
 **The AI revenue operating system for service businesses.** It answers the phone, works the
@@ -193,7 +193,7 @@ bio2026/
 │   ├── api/          server.ts (JSON + SSE + static console)
 │   └── cli.ts        demo, serve, simulate, seed, verify, reset
 ├── public/           index.html, styles.css, app.js
-├── tests/            62 tests across field, policy, scheduler, kernel, sim, tools, Hermes, API
+├── tests/            67 tests across field, policy, scheduler, kernel, sim, tools, Hermes, API
 ├── docs/             architecture, science, migration, results, deployment
 └── data/             events.jsonl (created on first run)
 ```
@@ -264,6 +264,10 @@ Full rationale and the integration contract: [`docs/TOOLING.md`](docs/TOOLING.md
 - [`docs/DEMO-SCRIPT.md`](docs/DEMO-SCRIPT.md) — the 7-minute demo, with objection handling.
 - [`docs/COMPETITIVE.md`](docs/COMPETITIVE.md) — positioning against lead marketplaces,
   answering services, CRMs, AI SDRs and in-house CSRs.
+- [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) — TCPA/10DLC, consent, quiet hours, STOP, claims,
+  reviews, data and incident response.
+- [`docs/BILLING.md`](docs/BILLING.md) — pricing, Stripe links, the close sequence, unit
+  economics and when to raise the price.
 
 ---
 
@@ -301,6 +305,7 @@ records `no-answer`, `busy`, `failed` and `canceled` as missed calls.
 Import a real customer list — consent is never invented:
 
 ```powershell
+node src/cli.ts setup-tenant --name "Acme Roofing" --city "Aurora" --state "CO" --owner "Sam" --phone "+13035550100" --ticket 12000
 node src/cli.ts import-csv --file customers.csv
 ```
 
@@ -311,6 +316,10 @@ and `consent_source`. Rows without consent are imported with a zero pressure bud
 
 The console's **Go-live checklist** reads `/api/setup/status` and shows exactly what is still
 missing: Twilio, Resend, contacts, consent, claims, Hermes.
+
+For a real pilot, set `CHOICE_HOLDOUT_PCT=0.15` before starting. 15% of marketing-eligible
+contacts receive no outbound, and `GET /api/experiment` reports bookings, revenue, messages and
+opt-outs by arm. The split is a deterministic hash, so it survives restarts and is reproducible.
 
 ---
 

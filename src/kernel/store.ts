@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type {
   ActionRecord,
@@ -142,6 +142,27 @@ export const DEFAULT_TENANT: Tenant = {
   },
   reviewLink: "https://g.page/r/summit-ridge-roofing/review",
 };
+
+/**
+ * A real customer is not Summit Ridge Roofing. `data/tenant.json` overrides the demo tenant;
+ * the CLI writes it with `setup-tenant`, and every store created with that data directory
+ * picks it up. Missing or malformed files fall back to the demo rather than failing startup.
+ */
+export function loadTenant(dataDir?: string): Tenant {
+  if (!dataDir) return DEFAULT_TENANT;
+  const file = join(dataDir, "tenant.json");
+  if (!existsSync(file)) return DEFAULT_TENANT;
+  try {
+    const parsed = JSON.parse(readFileSync(file, "utf8")) as Partial<Tenant>;
+    return {
+      ...DEFAULT_TENANT,
+      ...parsed,
+      proof: { ...DEFAULT_TENANT.proof, ...(parsed.proof ?? {}) },
+    };
+  } catch {
+    return DEFAULT_TENANT;
+  }
+}
 
 export function newContact(input: NewContactInput, tenant: Tenant, at: string): Contact {
   return {
@@ -342,7 +363,7 @@ export class KernelStore {
     claims?: Claim[];
     persist?: boolean;
   } = {}) {
-    const tenant = options.tenant ?? DEFAULT_TENANT;
+    const tenant = options.tenant ?? loadTenant(options.dataDir);
     this.state = emptyState(tenant);
     this.settings = options.settings ?? DEFAULT_SETTINGS;
     this.claims = options.claims ?? [];
