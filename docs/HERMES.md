@@ -1,5 +1,8 @@
 # Hermes: the read-only operations analyst
 
+> This document covers the **Assistant** lane. For the Operator lane — research, social,
+> sales and approval-gated sends — see [`OPERATOR.md`](OPERATOR.md).
+
 ## What Hermes is doing here
 
 Hermes is the owner's **chief of staff**, not a second decision engine.

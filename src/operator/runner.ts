@@ -11,11 +11,11 @@ import { updateOperatorTask } from "./store.ts";
 const execFileAsync = promisify(execFile);
 
 const SKILLS: Record<OperatorTaskType, { skill: string; toolsets?: string; maxTurns: number; approval: boolean }> = {
-  prospect_research: { skill: "prospect-research", toolsets: "web", maxTurns: 8, approval: false },
+  prospect_research: { skill: "prospect-research,lead-qualification", toolsets: "web", maxTurns: 8, approval: false },
   social_calendar: { skill: "social-calendar", maxTurns: 1, approval: false },
-  sales_sequence: { skill: "sales-sequence", maxTurns: 1, approval: false },
+  sales_sequence: { skill: "sales-sequence,lead-qualification,offer-strategy,cold-email,objection-handling", maxTurns: 1, approval: false },
   crm_hygiene: { skill: "crm-hygiene", maxTurns: 1, approval: false },
-  send_email: { skill: "email-draft", maxTurns: 1, approval: true },
+  send_email: { skill: "email-draft,cold-email", maxTurns: 1, approval: true },
   social_publish: { skill: "social-post", maxTurns: 1, approval: true },
 };
 

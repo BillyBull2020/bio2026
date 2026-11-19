@@ -75,6 +75,18 @@ the safe shadow mode.
 | Two-way reschedule/cancel sync | **Not built** | next calendar task |
 | Google/Outlook calendar sync | **Cal.diy feature** | connect inside Cal.diy, not the OS |
 
+## Works when you add Stripe, CRM or a social scheduler
+
+| Capability | Status | Requirement |
+|---|---|---|
+| Create a subscription Checkout URL | **Works** | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID` |
+| Push the book to a CRM/automation | **Works** | `CRM_WEBHOOK_URL` (n8n, Make, Zapier, Airtable) |
+| Publish an approved social post | **Works** | `SOCIAL_WEBHOOK_URL` (n8n, Make, Postiz, Buffer) |
+| Operator research / content / sales drafts | **Works** | Hermes + free model |
+| Operator send email after approval | **Works** | Resend configured |
+| Operator social post after approval | **Works** | Social webhook configured |
+| CRM write from the Operator | **Not built** | Add an MCP (Airtable, Close, HubSpot) and an approval path |
+
 ## Not built
 
 - Outbound voice calls or an AI receptionist. The OS can record a missed call; it does not answer
@@ -150,8 +162,8 @@ that is how accounts get banned.
 ## Test everything
 
 ```powershell
-npm test          # 73 unit/integration tests
-npm run selftest  # 9 end-to-end checks with mock Twilio/Resend/Cal.diy
+npm test          # 77 unit/integration tests
+npm run selftest  # 11 end-to-end checks with mock Twilio/Resend/Cal.diy/Stripe/CRM
 npm run verify    # hash-chain check on the live data
 ```
 

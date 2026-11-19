@@ -29,6 +29,16 @@ the first campaign. Do not waive it for a business that cannot produce a list.
 For the first five pilots, send the link and invoice manually. A full checkout inside the
 console is a later optimization, not a launch blocker.
 
+The OS also has a built-in Checkout endpoint once you add `STRIPE_SECRET_KEY` and
+`STRIPE_PRICE_ID`:
+
+```http
+POST /api/billing/checkout   { "email": "owner@example.com" }
+```
+
+It returns a Stripe Checkout URL for the subscription. It never invents a price; if the env is
+missing, it returns **400** and says what to add.
+
 ## The close sequence
 
 1. Demo (7 minutes). Ask for the list and the Twilio number.

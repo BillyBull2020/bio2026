@@ -28,7 +28,7 @@ If the answer to 3 is no, it is not a tool. It is a competing brain.
 | **HyperFrames** | **Yes** | Analyst proof assets: a 10-second revenue-leak or case-study video. | Invent a claim. A rendered video is a claim *candidate* until a human verifies it. |
 | **nginx** | **Yes** | Reverse proxy, TLS, basic auth in front of the console. | — |
 | **Firebase / Cloudflare** | **Yes** | Hosting the site, the console, or the event store. | Host the scheduler in a request-scoped function without durable state. |
-| **Hermes** | **Yes, read-only** | The operator's chief of staff: daily focus, weekly owner report, at-risk list, research summary. It receives a compact snapshot and returns text. | Send, choose moves, write the event log, change consent, or receive the full contact list. Run it with tools disabled. |
+| **Hermes** | **Yes, two lanes** | Assistant: read-only daily focus, weekly report, risk list. Operator: research, social calendar, sales sequence, CRM audit with skills/tools; `send_email` and `social_publish` require approval. | Choose a customer move, write the event log, receive the full contact list, or send/post without an approval. |
 | **OpenClaw** | **No, not in the decision path** | Optional isolated MCP/tool bridge for research. | Receive the contact list, choose moves, or write to the event log. |
 | **OpenMausBot** | **No** | At most a demo interface or a local operator chat. | Be a second roster of agents with its own memory and tools. |
 | **Mautic** | **No, not as the campaign brain** | At most SMTP/segment transport behind a delivery adapter. | Own consent, scheduling, or journey logic. |
@@ -38,19 +38,20 @@ If the answer to 3 is no, it is not a tool. It is a competing brain.
 
 ---
 
-## Why Hermes is read-only
+## Why Hermes has an approval boundary
 
-Hermes is a capable agent with its own memory, tools, skills and loop. That is exactly why it
-does **not** get the contact list or the send button.
+Hermes is a capable agent with its own memory, tools, skills and loop. It gets real work:
 
-In Choice OS, Hermes receives a compact, read-only snapshot of the business — revenue,
-bookings, pipeline, missed calls, the top six decisions — and a question. It returns text.
-It cannot send, change consent, book a job, or write to the event log. The kernel remains the
-only place that decides.
+- **Assistant lane:** a compact snapshot of revenue, bookings, pipeline, missed calls and the
+  top six decisions. It returns text. It cannot send or write the log.
+- **Operator lane:** prospect research, social calendar, sales sequence and CRM audit with
+  skills and web tools. Drafts are free. `send_email` and `social_publish` wait for a human
+  click.
 
-That gives the owner a real chief of staff (daily focus, weekly report, risk list, research
-summary) without creating a second brain that disagrees with the first. See
-[`HERMES.md`](HERMES.md) for the exact boundary and configuration.
+It still does **not** choose a customer move or write the decision log. The kernel remains the
+only place that decides who gets a customer message. That gives the owner a real operator
+without a second brain that disagrees with the first. See [`OPERATOR.md`](OPERATOR.md) and
+[`HERMES.md`](HERMES.md).
 
 OpenMausBot and Mautic remain outside the decision path for the same reason: they are
 competing brains, not tools.

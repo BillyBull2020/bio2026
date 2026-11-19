@@ -69,7 +69,7 @@ second decision-maker.
 6. Open **Business** and watch the **Go-live checklist** turn green. The first missing item is
    the next thing to fix.
 
-The checklist is live: Twilio, Resend, calendar, customer list, consent, claims, Hermes.
+The checklist is live: Twilio, Resend, calendar, customer list, consent, claims, Stripe, CRM, Hermes.
 
 ---
 

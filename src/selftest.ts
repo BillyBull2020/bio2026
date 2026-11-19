@@ -9,6 +9,8 @@ import { deliverAction, type DeliveryConfig } from "./tools/delivery.ts";
 import { calendarConfigFromEnv, createBooking, getAvailableSlots, reserveSlot, type CalendarConfig } from "./tools/calendar.ts";
 import { importContactsFromCsv } from "./tools/csv.ts";
 import { hermesStatus } from "./tools/hermes.ts";
+import { createCheckoutSession, type StripeConfig } from "./tools/stripe.ts";
+import { syncBook } from "./tools/crm.ts";
 import type { ActionRecord, Contact } from "./neuro/types.ts";
 
 const NOW = "2026-11-19T18:00:00.000Z";
@@ -159,13 +161,53 @@ export async function runSelfTest(): Promise<boolean> {
     }
   });
 
+  await check("Stripe checkout creates a subscription session", async () => {
+    const stripe = await mockServer((_url, _body, res) => {
+      res.end(JSON.stringify({ id: "cs_selftest", url: "https://checkout.stripe.test/cs_selftest" }));
+    });
+    try {
+      const config: StripeConfig = {
+        secretKey: "sk_test",
+        priceId: "price_selftest",
+        successUrl: "https://example.test/success",
+        cancelUrl: "https://example.test/cancel",
+        baseUrl: stripe.url,
+        timeoutMs: 2_000,
+      };
+      const result = await createCheckoutSession(config, { email: "owner@example.com", tenant: "Self Test" });
+      if (!result.ok || !result.url) throw new Error(result.error ?? "checkout failed");
+      return `${result.id} · ${result.url}`;
+    } finally {
+      await stripe.close();
+    }
+  });
+
+  await check("CRM sync posts the book", async () => {
+    let received: any = null;
+    const crm = await mockServer((_url, body, res) => {
+      received = JSON.parse(body);
+      res.end(JSON.stringify({ ok: true }));
+    });
+    try {
+      const result = await syncBook(
+        { url: `${crm.url}/crm`, token: "crm_test", timeoutMs: 2_000 },
+        { tenant: "Self Test", contacts: [{ id: "ct_1" }], bookings: [{ id: "bk_1" }] },
+      );
+      if (!result.ok) throw new Error(result.error ?? "CRM sync failed");
+      if (received?.contacts?.[0]?.id !== "ct_1") throw new Error("CRM payload is wrong");
+      return `${received.contacts.length} contact · ${received.bookings.length} booking`;
+    } finally {
+      await crm.close();
+    }
+  });
+
   await check("holdout report splits the eligible book", () => {
     const report = experimentReport(store, { CHOICE_HOLDOUT_PCT: "0.15", CHOICE_EXPERIMENT_ID: "selftest" } as NodeJS.ProcessEnv);
     if (report.treatment.contacts + report.holdout.contacts === 0) throw new Error("no eligible contacts");
     return `${report.treatment.contacts} treatment · ${report.holdout.contacts} holdout`;
   });
 
-  await check("Hermes is installed and read-only", () => {
+  await check("Hermes is installed with a model and fallback", () => {
     const status = hermesStatus();
     if (!status.available) throw new Error("Hermes not installed");
     return `${status.model} · fallback ${status.fallback?.model ?? "none"}`;

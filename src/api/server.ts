@@ -18,6 +18,8 @@ import { deliverAction, deliveryChannels, deliveryConfigFromEnv, sendEmailMessag
 import { askHermes, hermesStatus, type OpsSnapshot } from "../tools/hermes.ts";
 import { calendarConfigFromEnv, getAvailableSlots, slotFacts, type CalendarConfig, type SlotFacts } from "../tools/calendar.ts";
 import { publishSocial, socialConfigFromEnv } from "../tools/social.ts";
+import { createCheckoutSession, stripeConfigFromEnv } from "../tools/stripe.ts";
+import { crmConfigFromEnv, syncBook } from "../tools/crm.ts";
 import { createOperatorTask, getOperatorTask, listOperatorTasks, updateOperatorTask } from "../operator/store.ts";
 import { OPERATOR_TYPES, runOperatorTask } from "../operator/runner.ts";
 
@@ -25,6 +27,8 @@ const ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
 const PUBLIC = join(ROOT, "public");
 const DATA = join(ROOT, "data");
 const CALENDAR = calendarConfigFromEnv();
+const STRIPE = stripeConfigFromEnv();
+const CRM = crmConfigFromEnv();
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -581,6 +585,62 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
         return;
       }
 
+      if (path === "/api/crm/sync" && method === "POST") {
+        if (!CRM.url) {
+          send(res, 400, { error: "CRM_WEBHOOK_URL is not configured" });
+          return;
+        }
+        const contacts = store.contacts().map((c) => ({
+          id: c.id,
+          firstName: c.firstName,
+          lastName: c.lastName,
+          company: c.company,
+          phone: c.phone,
+          email: c.email,
+          city: c.city,
+          state: c.state,
+          stage: c.stage,
+          optedOut: c.optedOut,
+          tags: c.tags,
+        }));
+        const bookings = store.state.bookings.map((b) => ({
+          id: b.id,
+          contactId: b.contactId,
+          slot: b.slot,
+          value: b.value,
+          status: b.status,
+          createdAt: b.createdAt,
+        }));
+        const result = await syncBook(CRM, { tenant: store.state.tenant.name, contacts, bookings });
+        send(res, result.ok ? 200 : 502, result);
+        return;
+      }
+
+      if (path === "/api/billing/status") {
+        send(res, 200, {
+          configured: Boolean(STRIPE),
+          priceId: STRIPE?.priceId ?? null,
+          mode: "subscription",
+        });
+        return;
+      }
+
+      if (path === "/api/billing/checkout" && method === "POST") {
+        if (!STRIPE) {
+          send(res, 400, { error: "Stripe is not configured. Set STRIPE_SECRET_KEY and STRIPE_PRICE_ID." });
+          return;
+        }
+        const body = await readBody(req);
+        const email = typeof body.email === "string" ? body.email : undefined;
+        const result = await createCheckoutSession(STRIPE, { email, tenant: store.state.tenant.name });
+        if (!result.ok) {
+          send(res, 502, { error: result.error ?? "Stripe checkout failed" });
+          return;
+        }
+        send(res, 200, result);
+        return;
+      }
+
       if (path === "/api/calendar/slots") {
         if (!CALENDAR) {
           send(res, 400, { ok: false, error: "Cal.diy is not configured. Set CALCOM_BASE_URL, CALCOM_API_KEY and CALCOM_EVENT_TYPE_ID." });
@@ -608,6 +668,8 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
           { id: "contacts", label: "Customer list", ready: contacts.length > 0, detail: `${contacts.length} contacts` },
           { id: "consent", label: "Consent records", ready: consented > 0, detail: `${consented} contacts with consent` },
           { id: "claims", label: "Claim registry", ready: claims > 0, detail: `${claims} claims` },
+          { id: "billing", label: "Stripe billing", ready: Boolean(STRIPE), detail: STRIPE ? `Price ${STRIPE.priceId}` : "Add STRIPE_SECRET_KEY and STRIPE_PRICE_ID" },
+          { id: "crm", label: "CRM sync", ready: Boolean(CRM.url), detail: CRM.url ? "Webhook configured" : "Add CRM_WEBHOOK_URL" },
           { id: "hermes", label: "Hermes ops analyst", ready: hermes.available, detail: hermes.available ? `${hermes.model} · ${hermes.provider}` : "Install Hermes" },
         ];
         send(res, 200, {

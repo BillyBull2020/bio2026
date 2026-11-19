@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/BillyBull2020/bio2026/actions/workflows/ci.yml/badge.svg)](https://github.com/BillyBull2020/bio2026/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/badge/node-24%2B-5FA04E)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/tests-73-61c88f)](tests)
+[![Tests](https://img.shields.io/badge/tests-77-61c88f)](tests)
 [![License](https://img.shields.io/badge/license-source--available-dfa64c)](LICENSE)
 
 **The AI revenue operating system for service businesses.** It answers the phone, works the
@@ -76,8 +76,9 @@ npm run selftest
 ```
 
 `npm run selftest` exercises the whole loop without external keys: event chain, CSV consent,
-scheduler, Twilio payload, Resend payload, Cal.diy slots/reservation/booking, holdout and
-Hermes status. It uses local mock servers, so it proves the wiring before you buy anything.
+scheduler, Twilio payload, Resend payload, Cal.diy slots/reservation/booking, Stripe Checkout,
+CRM sync, holdout and Hermes status. It uses local mock servers, so it proves the wiring before
+you buy anything. **11/11 checks.**
 
 Or Docker (persist the event log with a volume):
 
@@ -198,7 +199,7 @@ bio2026/
 │   ├── api/          server.ts (JSON + SSE + static console)
 │   └── cli.ts        demo, serve, simulate, seed, verify, reset
 ├── public/           index.html, styles.css, app.js
-├── tests/            73 tests across field, policy, scheduler, kernel, sim, tools, Hermes, API
+├── tests/            77 tests across field, policy, scheduler, kernel, sim, tools, Hermes, API
 ├── docs/             architecture, science, migration, results, deployment
 └── data/             events.jsonl (created on first run)
 ```
@@ -286,6 +287,9 @@ Full rationale and the integration contract: [`docs/TOOLING.md`](docs/TOOLING.md
 
 ## Connect real delivery (pilot)
 
+The complete matrix of what is wired and what you must supply is
+[`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md).
+
 Copy [`.env.example`](.env.example) and set:
 
 ```powershell
@@ -328,7 +332,7 @@ and `consent_source`. Rows without consent are imported with a zero pressure bud
 `needs_consent`; the scheduler waits.
 
 The console's **Go-live checklist** reads `/api/setup/status` and shows exactly what is still
-missing: Twilio, Resend, calendar, contacts, consent, claims, Hermes.
+missing: Twilio, Resend, calendar, contacts, consent, claims, Stripe, CRM, Hermes.
 
 For real calendar holds, run Cal.diy and set `CALCOM_BASE_URL`, `CALCOM_API_KEY` and
 `CALCOM_EVENT_TYPE_ID`. The OS reads real availability, puts the real deadline on the

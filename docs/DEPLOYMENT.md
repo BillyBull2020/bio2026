@@ -177,12 +177,23 @@ CALCOM_API_KEY=
 CALCOM_EVENT_TYPE_ID=
 CALCOM_TIMEZONE=America/Denver
 
-# optional: Hermes read-only ops analyst (free model + local fallback)
+# Stripe pilot billing
+STRIPE_SECRET_KEY=
+STRIPE_PRICE_ID=
+
+# Social scheduler / CRM automation
+SOCIAL_WEBHOOK_URL=
+SOCIAL_WEBHOOK_TOKEN=
+CRM_WEBHOOK_URL=
+CRM_WEBHOOK_TOKEN=
+
+# Hermes: read-only assistant + Operator lane (free models)
 HERMES_BIN=C:\Users\you\AppData\Local\hermes\bin\hermes.exe
 HERMES_PROVIDER=openrouter
 HERMES_MODEL=meta-llama/llama-3.3-70b-instruct:free
 HERMES_FALLBACK_PROVIDER=ollama
 HERMES_FALLBACK_MODEL=nemotron-3.5-lightning:30b-a3b
+OPERATOR_MODEL=qwen/qwen3-235b-a22b:free
 
 # optional console protection (Basic Auth). Set both to enable.
 CHOICE_CONSOLE_USER=billy

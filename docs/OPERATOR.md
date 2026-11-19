@@ -70,8 +70,14 @@ Installed in the Hermes profile:
 
 - `prospect-research`
 - `social-calendar`
+- `social-post`
 - `sales-sequence`
+- `email-draft`
 - `crm-hygiene`
+- `lead-qualification` (BANT + ICP scoring, adapted from Sellbird)
+- `objection-handling` (LAARC)
+- `offer-strategy`
+- `cold-email` (compliant, plain-text outbound)
 
 The source is in [`.hermes/skills/`](../.hermes/skills). To add one, create a `SKILL.md` with
 `name` and `description` frontmatter, copy it into the active Hermes profile's `skills/`
