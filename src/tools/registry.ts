@@ -14,6 +14,7 @@ import {
   contactInputFromProspect,
   prospectsFromCsv,
 } from "./types.ts";
+import { askHermes } from "./hermes.ts";
 
 async function importSellbird(
   input: { file: string; limit?: number },
@@ -88,6 +89,16 @@ export const TOOLS: ToolDefinition<any, any>[] = [
     permission: "write",
     roles: ["analyst", "advocate", "human"],
     run: queueProofVideo,
+  },
+  {
+    id: "hermes.ops",
+    name: "Ask Hermes, the read-only ops analyst",
+    description:
+      "Give Hermes a business snapshot and a question. It writes a plan, report or risk list. It cannot send, change consent, book, or alter the decision log.",
+    permission: "read",
+    roles: ["analyst", "human"],
+    run: async (input: { prompt: string; snapshot: Parameters<typeof askHermes>[0] }) =>
+      askHermes(input.snapshot, input.prompt),
   },
 ];
 

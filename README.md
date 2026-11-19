@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/BillyBull2020/bio2026/actions/workflows/ci.yml/badge.svg)](https://github.com/BillyBull2020/bio2026/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/badge/node-24%2B-5FA04E)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/tests-52-61c88f)](tests)
+[![Tests](https://img.shields.io/badge/tests-56-61c88f)](tests)
 [![License](https://img.shields.io/badge/license-source--available-dfa64c)](LICENSE)
 
 **The AI revenue operating system for service businesses.** It answers the phone, works the
@@ -193,7 +193,7 @@ bio2026/
 │   ├── api/          server.ts (JSON + SSE + static console)
 │   └── cli.ts        demo, serve, simulate, seed, verify, reset
 ├── public/           index.html, styles.css, app.js
-├── tests/            52 tests across field, policy, scheduler, kernel, sim, tools, API
+├── tests/            56 tests across field, policy, scheduler, kernel, sim, tools, Hermes, API
 ├── docs/             architecture, science, migration, results, deployment
 └── data/             events.jsonl (created on first run)
 ```
@@ -239,12 +239,18 @@ with a permission level and a role allowlist; they return data, never decisions.
 | **Sellbird** | Use narrowly | Discovery and enrichment only. Import as zero-consent prospects; no sending, no AGPL code in the kernel. |
 | **HyperFrames** | Use | Analyst proof videos. A rendered asset is a claim candidate, not a claim. |
 | **nginx / Firebase / Cloudflare** | Use | Deployment and TLS. |
-| **Hermes / OpenClaw, OpenMausBot, Mautic** | Do not use in the decision path | They are competing brains. At most isolated tool workers or chat surfaces. |
+| **Hermes** | Use read-only | Ops analyst in the Business view: daily focus, weekly report, at-risk list. It receives a snapshot and returns text; it cannot send or mutate. |
+| **OpenClaw, OpenMausBot, Mautic** | Do not use in the decision path | They are competing brains. At most isolated tool workers or chat surfaces. |
 
 ```bash
 node src/cli.ts import-sellbird --file prospects.csv   # discovery, zero consent, kernel waits
 node src/cli.ts proof-video --contact <id>             # queue a HyperFrames manifest
 ```
+
+**Hermes sits in the Business view as a read-only operations analyst.** Ask for today's
+focus, a weekly owner report, or the at-risk list. It receives a compact snapshot — no contact
+list, no phone numbers — and returns text. It cannot send, consent, book or write to the event
+log. See [`docs/HERMES.md`](docs/HERMES.md) for the boundary.
 
 Full rationale and the integration contract: [`docs/TOOLING.md`](docs/TOOLING.md).
 

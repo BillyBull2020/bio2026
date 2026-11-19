@@ -13,6 +13,7 @@ import { MOVES } from "../neuro/moves.ts";
 import { DIMENSIONS, DIMENSION_META } from "../neuro/types.ts";
 import { llmConfigFromEnv, rewriteMessage } from "../llm/gateway.ts";
 import { deliverAction, deliveryConfigFromEnv } from "../tools/delivery.ts";
+import { askHermes, hermesStatus, type OpsSnapshot } from "../tools/hermes.ts";
 
 const ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
 const PUBLIC = join(ROOT, "public");
@@ -529,6 +530,47 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
           },
           results: enriched,
         });
+        return;
+      }
+
+      if (path === "/api/hermes/status") {
+        send(res, 200, hermesStatus());
+        return;
+      }
+
+      if (path === "/api/hermes/ask" && method === "POST") {
+        const body = await readBody(req);
+        const question = String(body.prompt ?? "").trim().slice(0, 500);
+        if (!question) {
+          send(res, 400, { error: "prompt is required" });
+          return;
+        }
+        const now = new Date().toISOString();
+        const view = store.portfolio(now);
+        const contacts = store.contacts();
+        const nowMs = Date.parse(now);
+        const top = view.slice(0, 6).map((v) => {
+          const plan = conductor.planFor(v.id, now);
+          return {
+            name: v.name,
+            situation: v.binding,
+            move: plan?.move.label ?? "Wait",
+            value: v.ticket,
+            readiness: v.readiness,
+            blocked: plan ? !plan.verdict.allowed : false,
+          };
+        });
+        const snapshot: OpsSnapshot = {
+          tenant: store.state.tenant.name,
+          revenueRecovered: store.state.bookings.reduce((sum, b) => sum + b.value, 0),
+          jobsBooked: store.state.bookings.length,
+          pipelineValue: Math.round(view.reduce((sum, v) => sum + v.ticket * v.readiness * 0.35, 0)),
+          missedCalls: contacts.reduce((sum, c) => sum + c.lostCallsPerMonth, 0),
+          actionsToday: store.state.actions.filter((a) => nowMs - Date.parse(a.at) <= 86_400_000).length,
+          openReviews: contacts.filter((c) => c.tags.includes("job_complete") && c.lastSignal?.type !== "review_left" && !c.doNotAskReview).length,
+          top,
+        };
+        send(res, 200, await askHermes(snapshot, question));
         return;
       }
 

@@ -641,6 +641,50 @@ body {
   color: var(--muted); font-size: 9.5px; line-height: 1.5;
 }
 
+/* ─── hermes ops analyst ──────────────────────────────────── */
+
+.hermes-panel { margin-top: 12px; }
+.hermes-body {
+  display: grid;
+  grid-template-columns: 1.05fr .95fr;
+  gap: 14px;
+  padding: 15px 16px 16px;
+}
+.hermes-copy p { margin: 0; max-width: 520px; color: var(--muted); font-size: 10.5px; line-height: 1.55; }
+.hermes-copy p b { color: var(--text); font-weight: 600; }
+.hermes-quick { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
+.hermes-quick button {
+  border: 1px solid var(--line-2);
+  background: rgba(139,92,246,.06);
+  color: #c4b5fd;
+  border-radius: 100px;
+  height: 24px; padding: 0 10px;
+  font-family: var(--mono); font-size: 8.5px; letter-spacing: .06em; text-transform: uppercase;
+  cursor: pointer;
+}
+.hermes-quick button:hover { background: rgba(139,92,246,.14); color: #ddd6fe; }
+.hermes-ask { display: flex; align-items: flex-start; gap: 7px; }
+.hermes-ask input {
+  flex: 1; height: 34px; border-radius: 8px;
+  border: 1px solid var(--line-2); background: #090c10; color: var(--text);
+  padding: 0 11px; font-family: var(--sans); font-size: 11.5px; outline: none;
+}
+.hermes-ask input:focus { border-color: rgba(139,92,246,.55); box-shadow: 0 0 0 3px rgba(139,92,246,.08); }
+.hermes-answer {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  min-height: 58px;
+}
+.hermes-answer.thinking { color: var(--gold); }
+.hermes-answer.error { color: var(--red); }
+.hermes-answer .h-meta { display: block; margin-top: 8px; font-family: var(--mono); font-size: 8px; letter-spacing: .08em; color: var(--dim); }
+
 /* ─── responsive ──────────────────────────────────────────── */
 
 @media (max-width: 1320px) {
@@ -670,6 +714,7 @@ body {
   .biz-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .phase-grid { grid-template-columns: 1fr; }
   .biz-lower { grid-template-columns: 1fr; }
+  .hermes-body { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 620px) {

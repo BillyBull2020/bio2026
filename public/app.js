@@ -7,6 +7,7 @@ const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const S = {
   data: null,
   business: null,
+  hermes: null,
   view: "business",
   selectedId: null,
   detail: null,
@@ -116,6 +117,7 @@ async function boot() {
     S.business = await api("/api/business").catch(() => null);
     renderAll();
     if (S.business) renderBusiness(S.business);
+    loadHermesStatus();
     const first = S.data.contacts.find((c) => c.name === "Dana Whitfield") ?? S.data.contacts[0];
     if (first) await selectContact(first.id);
     await loadEvents();
@@ -193,6 +195,54 @@ function renderBusiness(b) {
   $("#owner-note").textContent = b.connected.delivery
     ? "Delivery is connected. “Run my day” sends through your webhook, after every rail passes."
     : "Demo mode: decisions are logged, not delivered. Set CHOICE_WEBHOOK_URL to send through Twilio/Resend.";
+}
+
+/* ── Hermes ops analyst ───────────────────────────────────── */
+
+async function loadHermesStatus() {
+  const el = $("#hermes-status");
+  if (!el) return;
+  try {
+    const status = await api("/api/hermes/status");
+    S.hermes = status;
+    el.textContent = status.available ? `${status.model} · ${status.provider}` : "not installed";
+    el.style.color = status.available ? "#34d399" : "#ef4444";
+  } catch {
+    el.textContent = "unavailable";
+    el.style.color = "#ef4444";
+  }
+}
+
+async function askHermes(prompt) {
+  const text = String(prompt ?? "").trim();
+  if (!text) return;
+  const btn = $("#hermes-btn");
+  const input = $("#hermes-input");
+  const answer = $("#hermes-answer");
+  if (!answer || btn?.disabled) return;
+  if (input) input.value = text;
+  if (btn) btn.disabled = true;
+  answer.className = "hermes-answer thinking";
+  answer.textContent = "Hermes is reading the book…";
+  try {
+    const result = await api("/api/hermes/ask", { method: "POST", body: JSON.stringify({ prompt: text }) });
+    if (!result.ok) {
+      answer.className = "hermes-answer error";
+      answer.textContent = result.error ?? "Hermes could not answer.";
+      return;
+    }
+    answer.className = "hermes-answer";
+    answer.textContent = result.text;
+    const meta = document.createElement("span");
+    meta.className = "h-meta";
+    meta.textContent = `${result.model} · ${result.provider} · ${(result.durationMs / 1000).toFixed(1)}s · read-only`;
+    answer.appendChild(meta);
+  } catch (err) {
+    answer.className = "hermes-answer error";
+    answer.textContent = `Hermes failed: ${err.message}`;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 async function runDay() {
@@ -739,6 +789,9 @@ document.addEventListener("click", (event) => {
 
   const quick = event.target.closest?.(".quick button");
   if (quick) reply(quick.dataset.text);
+
+  const hermesQuick = event.target.closest?.(".hermes-quick button");
+  if (hermesQuick?.dataset.prompt) askHermes(hermesQuick.dataset.prompt);
 });
 
 $("#reply-btn")?.addEventListener("click", () => reply($("#reply-input").value));
@@ -748,5 +801,9 @@ $("#reply-input")?.addEventListener("keydown", (event) => {
 $("#tick-btn")?.addEventListener("click", runTick);
 $("#sim-btn")?.addEventListener("click", loadSimulation);
 $("#run-day-btn")?.addEventListener("click", runDay);
+$("#hermes-btn")?.addEventListener("click", () => askHermes($("#hermes-input")?.value));
+$("#hermes-input")?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") askHermes($("#hermes-input")?.value);
+});
 
 boot();

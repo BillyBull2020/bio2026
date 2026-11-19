@@ -40,6 +40,20 @@ anticipation, clarity, agency, commitment.** It moves the one that is actually b
 purchase, then stops. The 3.0 pressure budget and the policy rails are what keep that from
 turning into manipulation.
 
+### Hermes · the read-only operations analyst
+
+Below the queue is **Hermes**. Ask it:
+
+- “List all six contacts in the top array — name, move, value, readiness.”
+- “Write a concise weekly owner report.”
+- “Which contacts are at risk, and why?”
+- “What is the single highest-value action this week?”
+
+Hermes reads a compact snapshot — revenue, bookings, pipeline, missed calls, the top six
+decisions — and writes plain text. It is **read-only**: it cannot send, change consent, book a
+job, or write to the event log. That is deliberate; it is the owner's chief of staff, not a
+second decision-maker.
+
 ---
 
 ## The Kernel tab: what you are looking at

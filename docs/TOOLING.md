@@ -28,7 +28,8 @@ If the answer to 3 is no, it is not a tool. It is a competing brain.
 | **HyperFrames** | **Yes** | Analyst proof assets: a 10-second revenue-leak or case-study video. | Invent a claim. A rendered video is a claim *candidate* until a human verifies it. |
 | **nginx** | **Yes** | Reverse proxy, TLS, basic auth in front of the console. | — |
 | **Firebase / Cloudflare** | **Yes** | Hosting the site, the console, or the event store. | Host the scheduler in a request-scoped function without durable state. |
-| **Hermes / OpenClaw** | **No, not in the decision path** | Optional isolated MCP/tool bridge for research or a human-facing assistant. | Receive the contact list, choose moves, or write to the event log. |
+| **Hermes** | **Yes, read-only** | The operator's chief of staff: daily focus, weekly owner report, at-risk list, research summary. It receives a compact snapshot and returns text. | Send, choose moves, write the event log, change consent, or receive the full contact list. Run it with tools disabled. |
+| **OpenClaw** | **No, not in the decision path** | Optional isolated MCP/tool bridge for research. | Receive the contact list, choose moves, or write to the event log. |
 | **OpenMausBot** | **No** | At most a demo interface or a local operator chat. | Be a second roster of agents with its own memory and tools. |
 | **Mautic** | **No, not as the campaign brain** | At most SMTP/segment transport behind a delivery adapter. | Own consent, scheduling, or journey logic. |
 | **Jarvis / Jenny** | **Later, optional** | A voice console for the operator ("what should I do about Dana?"). | Talk to customers without the kernel. |
@@ -37,19 +38,22 @@ If the answer to 3 is no, it is not a tool. It is a competing brain.
 
 ---
 
-## Why not the agent platforms
+## Why Hermes is read-only
 
-Hermes/OpenClaw, OpenMausBot and the current BioDynamX stack all solve the same problem in
-the same shape: an agent with its own memory, tools, persona and loop. Adding one of them to
-Choice OS would give you:
+Hermes is a capable agent with its own memory, tools, skills and loop. That is exactly why it
+does **not** get the contact list or the send button.
 
-- a second memory that disagrees with the event log,
-- a second tool permission model,
-- a second place where "should we contact this person?" is answered,
-- and a second set of prompts to maintain.
+In Choice OS, Hermes receives a compact, read-only snapshot of the business — revenue,
+bookings, pipeline, missed calls, the top six decisions — and a question. It returns text.
+It cannot send, change consent, book a job, or write to the event log. The kernel remains the
+only place that decides.
 
-That is exactly the 14-agent problem with a new logo. The kernel's advantage is that there
-is **one** answer to "why did this message go out?" — and it is in `decision.made`.
+That gives the owner a real chief of staff (daily focus, weekly report, risk list, research
+summary) without creating a second brain that disagrees with the first. See
+[`HERMES.md`](HERMES.md) for the exact boundary and configuration.
+
+OpenMausBot and Mautic remain outside the decision path for the same reason: they are
+competing brains, not tools.
 
 Use these systems for what they are good at — a local chat surface, a browser worker, a
 research assistant — behind a typed adapter, with no write access to the log.

@@ -76,6 +76,29 @@
         <div class="owner-note" id="owner-note">The demo book is live. Connect delivery to run it on a real business.</div>
       </div>
     </div>
+
+    <div class="panel hermes-panel">
+      <div class="panel-head">
+        <h2>Hermes · operations analyst</h2>
+        <span class="mono" id="hermes-status">checking…</span>
+      </div>
+      <div class="hermes-body">
+        <div class="hermes-copy">
+          <p>Ask Hermes to read the book and write the plan. It is <b>read-only</b>: it cannot send, change consent, or book a job.</p>
+          <div class="hermes-quick">
+            <button data-prompt="List all six contacts in the top array as bullets: name — move — value — readiness. Then say what to do first.">Today's focus</button>
+            <button data-prompt="Write a concise weekly owner report from this snapshot. Include revenue, bookings, pipeline, and the three risks.">Weekly report</button>
+            <button data-prompt="Which contacts are at risk, and why? What should I do about the top one?">At-risk contacts</button>
+            <button data-prompt="What is the single highest-value action this week, and what should I ignore?">Highest-value action</button>
+          </div>
+        </div>
+        <div class="hermes-ask">
+          <input id="hermes-input" type="text" placeholder="Ask Hermes about the business…" autocomplete="off" />
+          <button class="btn primary" id="hermes-btn">Ask</button>
+        </div>
+        <div class="hermes-answer" id="hermes-answer">Hermes reads the same snapshot as the Business view. It cannot act on its own.</div>
+      </div>
+    </div>
   </section>
 
   <div id="kernel-view" class="view">
