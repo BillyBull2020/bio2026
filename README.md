@@ -1,11 +1,18 @@
 # BioDynamX Choice OS
 
+[![CI](https://github.com/BillyBull2020/bio2026/actions/workflows/ci.yml/badge.svg)](https://github.com/BillyBull2020/bio2026/actions/workflows/ci.yml)
+[![Node](https://img.shields.io/badge/node-24%2B-5FA04E)](https://nodejs.org)
+[![Tests](https://img.shields.io/badge/tests-51-61c88f)](tests)
+[![License](https://img.shields.io/badge/license-source--available-dfa64c)](LICENSE)
+
 **One kernel. Four roles. A decision-state operating system for ethical revenue conversations.**
 
 Most "AI agent" products model people as a roster of personalities. Choice OS models the
 *decision* instead: six resources a person needs before they can say yes, a scheduler that
 finds the binding constraint, and a policy kernel that makes coercion structurally
 impossible. The agent is the smallest part of the system.
+
+**Repository:** https://github.com/BillyBull2020/bio2026
 
 This repository is the complete, runnable operating system — not a slide deck and not
 another prompt pack.

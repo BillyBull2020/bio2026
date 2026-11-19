@@ -1,0 +1,28 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Kernel tests
+        run: node --test "tests/**/*.test.ts"
+      - name: Demo (seeds a book and plans decisions)
+        run: node src/cli.ts demo
+      - name: Simulation smoke
+        run: node src/cli.ts simulate --contacts 200 --days 10 --seeds 2
+      - name: Event chain
+        run: node src/cli.ts seed && node src/cli.ts verify
