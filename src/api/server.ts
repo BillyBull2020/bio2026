@@ -66,7 +66,7 @@ function safePath(urlPath: string): string | null {
   return full.startsWith(PUBLIC) ? full : null;
 }
 
-export async function startServer(options: { port?: number; dataDir?: string } = {}): Promise<ServerHandle> {
+export async function startServer(options: { port?: number; dataDir?: string; host?: string } = {}): Promise<ServerHandle> {
   const store = new KernelStore({
     tenant: DEFAULT_TENANT,
     dataDir: options.dataDir ?? DATA,
@@ -87,6 +87,17 @@ export async function startServer(options: { port?: number; dataDir?: string } =
     const method = req.method ?? "GET";
     const url = new URL(req.url ?? "/", "http://localhost");
     const path = url.pathname;
+
+    const authUser = process.env.CHOICE_CONSOLE_USER;
+    const authPass = process.env.CHOICE_CONSOLE_PASS;
+    if (authUser && authPass && path !== "/api/health") {
+      const expected = `Basic ${Buffer.from(`${authUser}:${authPass}`).toString("base64")}`;
+      if (req.headers.authorization !== expected) {
+        res.writeHead(401, { "www-authenticate": 'Basic realm="BioDynamX Choice OS"' });
+        res.end("Authentication required");
+        return;
+      }
+    }
 
     try {
       if (method === "OPTIONS") {
@@ -435,7 +446,7 @@ export async function startServer(options: { port?: number; dataDir?: string } =
   });
 
   const port = options.port ?? Number(process.env.PORT ?? 4177);
-  await new Promise<void>((resolvePromise) => server.listen(port, "127.0.0.1", resolvePromise));
+  await new Promise<void>((resolvePromise) => server.listen(port, options.host ?? "127.0.0.1", resolvePromise));
   const address = server.address();
   const actualPort = typeof address === "object" && address ? address.port : port;
 

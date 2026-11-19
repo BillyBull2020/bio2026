@@ -166,9 +166,15 @@ TWILIO_ACCOUNT_SID=...
 TWILIO_AUTH_TOKEN=...
 TWILIO_FROM=+1303...
 RESEND_API_KEY=...
+
+# optional console protection (Basic Auth). Set both to enable.
+CHOICE_CONSOLE_USER=billy
+CHOICE_CONSOLE_PASS=choose-a-long-password
 ```
 
 The kernel runs without any of these. It will simply log actions instead of delivering them.
+If `CHOICE_CONSOLE_USER` and `CHOICE_CONSOLE_PASS` are set, every route except `/api/health`
+requires Basic Auth. This is mandatory before exposing the console through a tunnel.
 
 ---
 

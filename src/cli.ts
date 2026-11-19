@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { rm, mkdir, readFile } from "node:fs/promises";
+import { networkInterfaces } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { KernelStore, DEFAULT_TENANT } from "./kernel/store.ts";
@@ -120,9 +121,22 @@ async function commandSeed(): Promise<void> {
 }
 
 async function commandServe(): Promise<void> {
-  const server = await startServer({ port: Number(flag("port", process.env.PORT ?? "4177")) });
+  const host = flag("host", "127.0.0.1")!;
+  const port = Number(flag("port", process.env.PORT ?? "4177"));
+  const server = await startServer({ port, host });
+  const lans = Object.entries(networkInterfaces())
+    .flatMap(([name, addrs]) =>
+      (addrs ?? [])
+        .filter((n) => n.family === "IPv4" && !n.internal)
+        .filter((n) => !/tailscale|loopback/i.test(name) && !n.address.startsWith("100."))
+        .map((n) => ({ name, address: n.address })),
+    );
   console.log(`\nBioDynamX CHOICE OS`);
   console.log(`console  ${server.url}`);
+  if (host === "0.0.0.0") {
+    for (const lan of lans) console.log(`lan      http://${lan.address}:${port}  (${lan.name})`);
+  }
+  if (process.env.CHOICE_CONSOLE_USER) console.log(`login    basic auth enabled`);
   console.log(`api      ${server.url}/api/state`);
   console.log(`events   ${server.url}/api/events`);
   console.log(`kernel   ${server.store.contacts().length} contacts · ${server.store.log.events.length} events · chain ${server.store.log.verify().ok ? "verified" : "BROKEN"}`);

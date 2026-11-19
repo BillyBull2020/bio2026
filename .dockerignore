@@ -1,0 +1,6 @@
+.git
+data/events.jsonl
+data/proofs
+data/snapshot.json
+*.log
+shot-console.png

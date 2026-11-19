@@ -1,3 +1,5 @@
+<p align="center"><img src="public/brand/crown-256.png" width="140" alt="BioDynamX sovereign crown" /></p>
+
 # BioDynamX Choice OS
 
 [![CI](https://github.com/BillyBull2020/bio2026/actions/workflows/ci.yml/badge.svg)](https://github.com/BillyBull2020/bio2026/actions/workflows/ci.yml)
@@ -13,6 +15,10 @@ finds the binding constraint, and a policy kernel that makes coercion structural
 impossible. The agent is the smallest part of the system.
 
 **Repository:** https://github.com/BillyBull2020/bio2026
+
+**Open the console:** http://127.0.0.1:4177 · **First time?** Read [START-HERE.md](START-HERE.md)
+or double-click **`Start-ChoiceOS.bat`**. Run `node src/cli.ts serve --host 0.0.0.0` to reach it
+from your phone on the same Wi-Fi.
 
 This repository is the complete, runnable operating system — not a slide deck and not
 another prompt pack.
@@ -60,6 +66,13 @@ npm run demo
 npm start
 npm run simulate
 npm test
+```
+
+Or Docker (persist the event log with a volume):
+
+```bash
+docker build -t biodynamx/choice-os .
+docker run -p 4177:4177 -v choice-data:/app/data biodynamx/choice-os
 ```
 
 The console is the product surface. It shows, for any contact:

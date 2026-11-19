@@ -41,7 +41,7 @@ const BINDING_COPY = {
   commitment: "A small action already taken. Momentum is real.",
 };
 
-const SYSTEM_COLOR = { threat: "#dfa64c", social: "#62c6d5", deliberative: "#9d8cff" };
+const SYSTEM_COLOR = { threat: "#d9b45b", social: "#34d399", deliberative: "#a78bfa" };
 
 const fmtMoney = (n) =>
   n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M` : n >= 1_000 ? `$${Math.round(n / 1000)}k` : `$${Math.round(n)}`;
@@ -135,12 +135,12 @@ function renderAll() {
 
 function renderKpis(m) {
   const cards = [
-    { label: "Contacts", value: fmtNum(m.active), sub: `${fmtNum(m.contacts)} total · ${fmtNum(m.contacts - m.active)} exited`, accent: "#62c6d5" },
-    { label: "Ready now", value: fmtNum(m.ready), sub: "readiness ≥ 55%", accent: "#9d8cff" },
-    { label: "Actions sent", value: fmtNum(m.actions), sub: `${fmtNum(m.decisions - m.actions)} decisions logged`, accent: "#dfa64c" },
-    { label: "Booked", value: fmtNum(m.bookings), sub: `${fmtNum(m.committed)} committed or sustained`, accent: "#61c88f" },
-    { label: "Pipeline", value: fmtMoney(m.revenue), sub: "booked value", accent: "#dfa64c" },
-    { label: "Opt-outs", value: fmtNum(m.optOuts), sub: Object.keys(m.blocked ?? {}).length ? `${fmtNum(Object.values(m.blocked).reduce((a, b) => a + b, 0))} policy blocks` : "no blocks", accent: "#e06c62" },
+    { label: "Contacts", value: fmtNum(m.active), sub: `${fmtNum(m.contacts)} total · ${fmtNum(m.contacts - m.active)} exited`, accent: "#a78bfa" },
+    { label: "Ready now", value: fmtNum(m.ready), sub: "readiness ≥ 55%", accent: "#3b82f6" },
+    { label: "Actions sent", value: fmtNum(m.actions), sub: `${fmtNum(m.decisions - m.actions)} decisions logged`, accent: "#d9b45b" },
+    { label: "Booked", value: fmtNum(m.bookings), sub: `${fmtNum(m.committed)} committed or sustained`, accent: "#34d399" },
+    { label: "Pipeline", value: fmtMoney(m.revenue), sub: "booked value", accent: "#d9b45b" },
+    { label: "Opt-outs", value: fmtNum(m.optOuts), sub: Object.keys(m.blocked ?? {}).length ? `${fmtNum(Object.values(m.blocked).reduce((a, b) => a + b, 0))} policy blocks` : "no blocks", accent: "#ef4444" },
   ];
   $("#kpis").innerHTML = cards
     .map(
@@ -181,7 +181,7 @@ function renderRoster() {
         <div class="c-main">
           <span class="c-name">${esc(c.name)}${human ? ' <span class="stage human" style="margin-left:5px">human</span>' : ""}</span>
           <span class="c-sub"><span class="stage ${stageClass(stage)}">${esc(title(stage))}</span><span class="c-city">${esc(c.city)}</span></span>
-          <div class="bar"><i style="width:${Math.round(c.readiness * 100)}%;background:${c.readiness > 0.6 ? "#61c88f" : c.readiness > 0.4 ? "#dfa64c" : "#5c6673"}"></i></div>
+          <div class="bar"><i style="width:${Math.round(c.readiness * 100)}%;background:${c.readiness > 0.6 ? "#34d399" : c.readiness > 0.4 ? "#d9b45b" : "#5f5a6c"}"></i></div>
         </div>
         <div class="c-right">
           <span class="c-ready">${Math.round(c.readiness * 100)}%</span>
@@ -223,14 +223,14 @@ function radar(field) {
   const rings = [0.25, 0.5, 0.75, 1]
     .map((level) => {
       const points = dims.map((_, i) => pt(i, level).map((v) => v.toFixed(1)).join(",")).join(" ");
-      return `<polygon points="${points}" fill="none" stroke="#232a33" stroke-width="0.8" ${level === 1 ? 'stroke="#2d3540"' : ""}/>`;
+      return `<polygon points="${points}" fill="none" stroke="#262130" stroke-width="0.8" ${level === 1 ? 'stroke="#322b40"' : ""}/>`;
     })
     .join("");
 
   const axes = dims
     .map((_, i) => {
       const [x, y] = pt(i, 1);
-      return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#1f262e" stroke-width="0.8"/>`;
+      return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#221e2d" stroke-width="0.8"/>`;
     })
     .join("");
 
@@ -253,12 +253,12 @@ function radar(field) {
 
   return `<defs>
       <radialGradient id="fieldFill" cx="50%" cy="50%" r="60%">
-        <stop offset="0%" stop-color="#9d8cff" stop-opacity=".28"/>
-        <stop offset="100%" stop-color="#62c6d5" stop-opacity=".10"/>
+        <stop offset="0%" stop-color="#8b5cf6" stop-opacity=".28"/>
+        <stop offset="100%" stop-color="#3b82f6" stop-opacity=".10"/>
       </radialGradient>
     </defs>
     ${rings}${axes}
-    <polygon points="${poly}" fill="url(#fieldFill)" stroke="#b9a6ff" stroke-width="1.5" stroke-linejoin="round"/>
+    <polygon points="${poly}" fill="url(#fieldFill)" stroke="#a78bfa" stroke-width="1.5" stroke-linejoin="round"/>
     ${dots}${labels}`;
 }
 
@@ -288,7 +288,7 @@ function renderDecision() {
       const v = field[d.id];
       return `<div class="leg-row">
         <span class="leg-name">${esc(d.label)}</span>
-        <div class="leg-bar"><i style="width:${Math.round(v * 100)}%;background:linear-gradient(90deg,${SYSTEM_COLOR[d.system]},#b9a6ff)"></i></div>
+        <div class="leg-bar"><i style="width:${Math.round(v * 100)}%;background:linear-gradient(90deg,${SYSTEM_COLOR[d.system]},#a78bfa)"></i></div>
         <span class="leg-val">${Math.round(v * 100)}</span>
       </div>`;
     })
@@ -389,7 +389,7 @@ function renderAlternatives(decision) {
               <td>${esc(title(a.moveId))}</td>
               <td class="num">${Number(a.score).toFixed(2)}</td>
               <td class="num">${a.deltaReadiness >= 0 ? "+" : ""}${Number(a.deltaReadiness).toFixed(2)}</td>
-              <td>${a.blocked ? `<span class="no">blocked</span>` : '<span style="color:#61c88f">legal</span>'}</td>
+              <td>${a.blocked ? `<span class="no">blocked</span>` : '<span style="color:#34d399">legal</span>'}</td>
             </tr>`,
           )
           .join("")}
@@ -412,7 +412,7 @@ function renderRails(verdict, contact) {
   });
   $("#rails").innerHTML = rendered.join("");
   $("#rail-status").textContent = verdict.allowed ? "clear" : "blocked";
-  $("#rail-status").style.color = verdict.allowed ? "#61c88f" : "#e06c62";
+  $("#rail-status").style.color = verdict.allowed ? "#34d399" : "#ef4444";
 }
 
 function renderBudget(contact) {
@@ -517,7 +517,7 @@ async function loadEvents() {
 
 function renderEvents(chain) {
   $("#log-chain").textContent = chain?.ok ? `chain verified · ${chain.count}` : "chain broken";
-  $("#log-chain").style.color = chain?.ok ? "#61c88f" : "#e06c62";
+  $("#log-chain").style.color = chain?.ok ? "#34d399" : "#ef4444";
   $("#log-table").innerHTML = S.events
     .slice(0, 60)
     .map((e) => {
@@ -606,7 +606,7 @@ function renderSimulation(r) {
       ${simRow("Sends / contact", b.sendsPerContact, o.sendsPerContact, (v) => Number(v).toFixed(2), true)}
       ${simRow("Revenue / 1k contacts", b.revenuePer1k, o.revenuePer1k, (v) => fmtMoney(v))}
     </div>
-    <div class="sim-legend"><span><i style="background:#47505c"></i>Persona blasting</span><span><i style="background:#dfa64c"></i>Choice OS</span><span>${r.config.contacts} contacts · ${r.config.days} days · ${r.config.seeds} seeds</span></div>
+    <div class="sim-legend"><span><i style="background:#4a4557"></i>Persona blasting</span><span><i style="background:#8b5cf6"></i>Choice OS</span><span>${r.config.contacts} contacts · ${r.config.days} days · ${r.config.seeds} seeds</span></div>
     <details class="sim-assumptions"><summary>Model assumptions</summary><ul>${r.assumptions.map((a) => `<li>${esc(a)}</li>`).join("")}</ul></details>`;
 }
 
