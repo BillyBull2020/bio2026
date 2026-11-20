@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/BillyBull2020/bio2026/actions/workflows/ci.yml/badge.svg)](https://github.com/BillyBull2020/bio2026/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/badge/node-24%2B-5FA04E)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/tests-80-61c88f)](tests)
+[![Tests](https://img.shields.io/badge/tests-82-61c88f)](tests)
 [![License](https://img.shields.io/badge/license-source--available-dfa64c)](LICENSE)
 
 **The AI revenue operating system for service businesses.** It answers the phone, works the
@@ -199,7 +199,7 @@ bio2026/
 │   ├── api/          server.ts (JSON + SSE + static console)
 │   └── cli.ts        demo, serve, simulate, seed, verify, reset
 ├── public/           index.html, styles.css, app.js
-├── tests/            80 tests across field, policy, scheduler, kernel, sim, tools, Hermes, API
+├── tests/            82 tests across field, policy, scheduler, kernel, sim, tools, Hermes, API
 ├── docs/             architecture, science, migration, results, deployment
 └── data/             events.jsonl (created on first run)
 ```
@@ -292,6 +292,8 @@ Full rationale and the integration contract: [`docs/TOOLING.md`](docs/TOOLING.md
   voicemail, the close and the referral ask.
 - [`docs/90-DAY-PLAN.md`](docs/90-DAY-PLAN.md) — the week-by-week plan, scorecard and risk
   responses.
+- [`docs/INDUSTRIES.md`](docs/INDUSTRIES.md) — the ten industry presets, which two to sell
+  first, and the first 7-day target plan.
 
 ---
 

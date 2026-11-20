@@ -175,7 +175,7 @@ X/LinkedIn and call it automation; that is how accounts get banned.
 ## Test everything
 
 ```powershell
-npm test          # 80 unit/integration tests
+npm test          # 82 unit/integration tests
 npm run selftest  # 11 end-to-end checks with mock Twilio/Resend/Cal.diy/Stripe/CRM
 npm run verify    # hash-chain check on the live data
 ```

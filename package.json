@@ -16,6 +16,7 @@
     "import-sellbird": "node src/cli.ts import-sellbird",
     "import-csv": "node src/cli.ts import-csv",
     "setup-tenant": "node src/cli.ts setup-tenant",
+    "industries": "node src/cli.ts industries",
     "selftest": "node src/cli.ts selftest",
     "media-add": "node src/cli.ts media-add",
     "proof-video": "node src/cli.ts proof-video",

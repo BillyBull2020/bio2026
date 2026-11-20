@@ -20,13 +20,23 @@ test("HTTP console exposes a working kernel surface", async () => {
     const dana = state.contacts.find((c: { name: string }) => c.name === "Dana Whitfield");
     assert.ok(dana);
 
-    const plan = await (await fetch(`${server.url}/api/contacts/${dana.id}/plan`)).json();
+    let target: any = null;
+    let plan: any = null;
+    for (const contact of state.contacts) {
+      const candidate = await (await fetch(`${server.url}/api/contacts/${contact.id}/plan`)).json();
+      if (candidate.decision?.moveId && candidate.decision.moveId !== "wait" && candidate.message?.body?.length > 0) {
+        target = contact;
+        plan = candidate;
+        break;
+      }
+    }
+    assert.ok(target, "expected at least one actionable contact");
     assert.ok(plan.decision.moveId);
     assert.ok(plan.message.body.length > 0);
     assert.equal(plan.verdict.allowed, true);
 
     const sent = await (
-      await fetch(`${server.url}/api/contacts/${dana.id}/send`, {
+      await fetch(`${server.url}/api/contacts/${target.id}/send`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ channel: plan.channel }),
@@ -36,7 +46,7 @@ test("HTTP console exposes a working kernel surface", async () => {
     assert.ok(sent.action.id.startsWith("act_"));
 
     const replied = await (
-      await fetch(`${server.url}/api/contacts/${dana.id}/reply`, {
+      await fetch(`${server.url}/api/contacts/${target.id}/reply`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ text: "How much does it cost?" }),

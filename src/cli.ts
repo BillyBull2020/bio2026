@@ -15,6 +15,7 @@ import { TOOLS, listTools, toolById } from "./tools/registry.ts";
 import { importContactsFromCsv } from "./tools/csv.ts";
 import { runSelfTest } from "./selftest.ts";
 import { addMedia } from "./tools/media.ts";
+import { industryList, industryPreset } from "./kernel/industries.ts";
 
 const ROOT = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const DATA = join(ROOT, "data");
@@ -43,27 +44,44 @@ async function ensureData(): Promise<void> {
 async function commandSetupTenant(): Promise<void> {
   const name = flag("name");
   if (!name) {
-    console.error('Usage: node src/cli.ts setup-tenant --name "Acme Roofing" [--trade roofing] [--city Denver] [--state CO] [--owner "Ray"] [--phone "+1303..."] [--ticket 14500] [--review URL]');
+    console.error('Usage: node src/cli.ts setup-tenant --name "Acme Roofing" [--industry roofing] [--trade roofing] [--city Denver] [--state CO] [--owner "Ray"] [--phone "+1303..."] [--ticket 14500] [--review URL]');
+    process.exitCode = 1;
+    return;
+  }
+  const industryId = flag("industry");
+  const preset = industryId ? industryPreset(industryId) : undefined;
+  if (industryId && !preset) {
+    console.error(`Unknown industry "${industryId}". Run: node src/cli.ts industries`);
     process.exitCode = 1;
     return;
   }
   const tenant = {
     ...DEFAULT_TENANT,
     name,
-    trade: flag("trade") ?? DEFAULT_TENANT.trade,
+    trade: flag("trade") ?? preset?.trade ?? DEFAULT_TENANT.trade,
     city: flag("city") ?? DEFAULT_TENANT.city,
     state: flag("state") ?? DEFAULT_TENANT.state,
     ownerName: flag("owner") ?? DEFAULT_TENANT.ownerName,
     ownerPhone: flag("phone") ?? DEFAULT_TENANT.ownerPhone,
-    avgTicket: Number(flag("ticket") ?? DEFAULT_TENANT.avgTicket),
+    avgTicket: Number(flag("ticket") ?? preset?.avgTicket ?? DEFAULT_TENANT.avgTicket),
     reviewLink: flag("review") ?? DEFAULT_TENANT.reviewLink,
   };
   await ensureData();
   await writeFile(join(DATA, "tenant.json"), `${JSON.stringify(tenant, null, 2)}\n`, "utf8");
   console.log(`\nTenant configured: ${tenant.name} · ${tenant.city}, ${tenant.state}`);
   console.log(`  trade: ${tenant.trade} · avg ticket: $${tenant.avgTicket.toLocaleString()} · owner: ${tenant.ownerName}`);
+  if (preset) console.log(`  industry preset: ${preset.label} · ${preset.season}`);
   console.log(`  written: ${join(DATA, "tenant.json")}`);
   console.log(`\nNext: node src/cli.ts import-csv --file customers.csv\n`);
+}
+
+function commandIndustries(): void {
+  console.log("\nIndustries supported by the kernel:\n");
+  for (const p of industryList()) {
+    console.log(`  ${p.id.padEnd(14)} ${p.label.padEnd(14)} $${p.avgTicket.toLocaleString().padStart(8)} ticket · ${p.missedCallsPerMonth} missed calls/mo`);
+    console.log(`  ${"".padEnd(14)} ${p.pitch}`);
+  }
+  console.log("\nUse: node src/cli.ts setup-tenant --name \"Acme\" --industry hvac\n");
 }
 
 async function commandMediaAdd(): Promise<void> {
@@ -282,6 +300,9 @@ switch (command) {
     break;
   case "setup-tenant":
     await commandSetupTenant();
+    break;
+  case "industries":
+    commandIndustries();
     break;
   case "tools":
     await commandTools();
