@@ -19,6 +19,9 @@ else needs its own ticket, offer, proof and claims.
 | Solar | $18,000 | 8 | utility rates |
 | Painting | $4,500 | 8 | spring / fall |
 | Garage doors | $2,500 | 12 | spring / winter |
+| Bookkeeping | $9,000 | 12 | tax season / quarter close |
+| Accounting | $14,000 | 10 | tax season / year-end |
+| Agency / consulting | $18,000 | 10 | budget season |
 
 Set one:
 
@@ -28,6 +31,15 @@ node src/cli.ts setup-tenant --name "Acme Heating" --industry hvac --city "Auror
 
 The preset sets the trade and default ticket. It does **not** create claims. You must supply
 the license, insurance, certifications, reviews and case studies.
+
+**Quick Accurate Books** is the first professional-services test:
+
+```powershell
+node src/cli.ts setup-tenant --name "Quick Accurate Books" --industry bookkeeping --city "Thornton" --state CO --owner "Billy" --phone "+13035550100"
+```
+
+Its public audit is `https://biodynamx.com/audit.html?brand=qa`; the page switches to the
+Quick Accurate Books name, teal accent and bookkeeping defaults.
 
 ## Where to start
 

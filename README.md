@@ -199,7 +199,7 @@ bio2026/
 │   ├── api/          server.ts (JSON + SSE + static console)
 │   └── cli.ts        demo, serve, simulate, seed, verify, reset
 ├── public/           index.html, styles.css, app.js
-├── tests/            82 tests across field, policy, scheduler, kernel, sim, tools, Hermes, API
+├── tests/            84 tests across field, policy, scheduler, kernel, sim, tools, Hermes, API
 ├── docs/             architecture, science, migration, results, deployment
 └── data/             events.jsonl (created on first run)
 ```
@@ -292,7 +292,7 @@ Full rationale and the integration contract: [`docs/TOOLING.md`](docs/TOOLING.md
   voicemail, the close and the referral ask.
 - [`docs/90-DAY-PLAN.md`](docs/90-DAY-PLAN.md) — the week-by-week plan, scorecard and risk
   responses.
-- [`docs/INDUSTRIES.md`](docs/INDUSTRIES.md) — the ten industry presets, which two to sell
+- [`docs/INDUSTRIES.md`](docs/INDUSTRIES.md) — the thirteen industry presets, which two to sell
   first, and the first 7-day target plan.
 
 ---

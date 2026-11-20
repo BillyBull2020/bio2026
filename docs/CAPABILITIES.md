@@ -82,6 +82,7 @@ the safe shadow mode.
 | Create a subscription Checkout URL | **Works** | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID` |
 | Push the book to a CRM/automation | **Works** | `CRM_WEBHOOK_URL` (n8n, Make, Zapier, Airtable) |
 | Publish an approved social post | **Works** | `BUFFER_API_KEY` + `BUFFER_CHANNEL_IDS`, or `SOCIAL_WEBHOOK_URL` |
+| Public revenue-leak audit | **Works** | `https://biodynamx.com/audit` (instant number + email) |
 | Host a public image/video URL | **Works** | `CHOICE_PUBLIC_URL` + `npm run media-add -- --file ...` |
 | Operator research / content / sales drafts | **Works** | Hermes + free model |
 | Operator send email after approval | **Works** | Resend configured |
@@ -175,7 +176,7 @@ X/LinkedIn and call it automation; that is how accounts get banned.
 ## Test everything
 
 ```powershell
-npm test          # 82 unit/integration tests
+npm test          # 84 unit/integration tests
 npm run selftest  # 11 end-to-end checks with mock Twilio/Resend/Cal.diy/Stripe/CRM
 npm run verify    # hash-chain check on the live data
 ```

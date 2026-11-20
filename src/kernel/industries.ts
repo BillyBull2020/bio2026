@@ -106,6 +106,33 @@ export const INDUSTRIES: Record<string, IndustryPreset> = {
     season: "spring and winter",
     pitch: "A broken spring is an emergency. A missed call is a same-day job lost.",
   },
+  bookkeeping: {
+    id: "bookkeeping",
+    label: "Bookkeeping",
+    trade: "bookkeeping",
+    avgTicket: 9_000,
+    missedCallsPerMonth: 12,
+    season: "tax season and quarter close",
+    pitch: "A missed discovery call is a monthly client that went to the next bookkeeper.",
+  },
+  accounting: {
+    id: "accounting",
+    label: "Accounting",
+    trade: "accounting",
+    avgTicket: 14_000,
+    missedCallsPerMonth: 10,
+    season: "tax season and year-end",
+    pitch: "A missed advisory call is a year-round client that never started.",
+  },
+  agency: {
+    id: "agency",
+    label: "Agency / consulting",
+    trade: "agency",
+    avgTicket: 18_000,
+    missedCallsPerMonth: 10,
+    season: "budget season",
+    pitch: "A missed discovery call is a retainer that went to the next agency.",
+  },
 };
 
 export function industryPreset(id: string): IndustryPreset | undefined {

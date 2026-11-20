@@ -25,6 +25,8 @@ import { crmConfigFromEnv, syncBook } from "../tools/crm.ts";
 import { MEDIA_DIR, isMediaFilename, mediaContentType } from "../tools/media.ts";
 import { createOperatorTask, getOperatorTask, listOperatorTasks, updateOperatorTask } from "../operator/store.ts";
 import { OPERATOR_TYPES, runOperatorTask } from "../operator/runner.ts";
+import { auditText, calculateAudit, type AuditInput } from "../audit/calculator.ts";
+import { listAuditLeads, saveAuditLead } from "../audit/store.ts";
 
 const ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
 const PUBLIC = join(ROOT, "public");
@@ -114,6 +116,7 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
   const startedAt = Date.now();
   let lastSim: unknown = null;
   let calendarCache: { at: number; facts: SlotFacts | null } | null = null;
+  const auditHits = new Map<string, number[]>();
 
   async function currentCalendarFacts(): Promise<SlotFacts | undefined> {
     if (!CALENDAR) return undefined;
@@ -135,7 +138,7 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
 
     const authUser = process.env.CHOICE_CONSOLE_USER;
     const authPass = process.env.CHOICE_CONSOLE_PASS;
-    if (authUser && authPass && path !== "/api/health" && !path.startsWith("/webhooks/") && !path.startsWith("/media/")) {
+    if (authUser && authPass && path !== "/api/health" && path !== "/api/audit" && !path.startsWith("/webhooks/") && !path.startsWith("/media/")) {
       const expected = `Basic ${Buffer.from(`${authUser}:${authPass}`).toString("base64")}`;
       if (req.headers.authorization !== expected) {
         res.writeHead(401, { "www-authenticate": 'Basic realm="BioDynamX Choice OS"' });
@@ -801,6 +804,115 @@ export async function startServer(options: { port?: number; dataDir?: string; ho
         const reply = result?.reply?.trim() || "Got it. A person will follow up shortly.";
         res.writeHead(200, { "content-type": "text/xml; charset=utf-8" });
         res.end(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>${xmlEscape(reply)}</Message></Response>`);
+        return;
+      }
+
+      if (path === "/api/audit" && method === "POST") {
+        const ip = String(req.headers["x-forwarded-for"] ?? "").split(",")[0].trim() || req.socket.remoteAddress || "unknown";
+        const nowMs = Date.now();
+        const hits = (auditHits.get(ip) ?? []).filter((t) => nowMs - t < 3_600_000);
+        if (hits.length >= 20) {
+          send(res, 429, { error: "Too many audits from this address. Try again later." });
+          return;
+        }
+        hits.push(nowMs);
+        auditHits.set(ip, hits);
+
+        const body = await readBody(req);
+        if (body.website) {
+          send(res, 200, { ok: true, estimate: null, bookingUrl: null, emailed: false });
+          return;
+        }
+        const name = String(body.name ?? "").trim().slice(0, 120);
+        const email = String(body.email ?? "").trim().toLowerCase().slice(0, 200);
+        const company = String(body.company ?? "").trim().slice(0, 160);
+        const trade = String(body.trade ?? "roofing").trim().slice(0, 60);
+        if (!name || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          send(res, 400, { error: "name and a valid email are required" });
+          return;
+        }
+        const input: AuditInput = {
+          trade,
+          missedCallsPerWeek: Number(body.missedCallsPerWeek ?? 0),
+          averageTicket: Number(body.averageTicket ?? 0),
+          listSize: Number(body.listSize ?? 0),
+        };
+        const estimate = calculateAudit(input);
+        await saveAuditLead(input, estimate, {
+          name,
+          email,
+          company,
+          source: String(body.source ?? "audit-page").slice(0, 80),
+        });
+
+        const delivery = deliveryConfigFromEnv();
+        let emailed = false;
+        if (delivery.resend) {
+          const result = await sendEmailMessage(
+            delivery.resend,
+            {
+              to: email,
+              subject: `Your ${trade} revenue leak`,
+              text: auditText(input, estimate),
+            },
+            delivery.timeoutMs,
+          );
+          emailed = result.ok;
+          const notify = process.env.AUDIT_NOTIFY_EMAIL;
+          if (notify) {
+            await sendEmailMessage(
+              delivery.resend,
+              {
+                to: notify,
+                subject: `New audit lead: ${company || name} · $${estimate.annualAtStake.toLocaleString()}/yr`,
+                text: `${name} <${email}> · ${company}\n${trade}\nMissed calls/week: ${input.missedCallsPerWeek}\nAverage ticket: $${input.averageTicket.toLocaleString()}\nAnnual at stake: $${estimate.annualAtStake.toLocaleString()}\n\nFollow up today.`,
+              },
+              delivery.timeoutMs,
+            );
+          }
+        }
+
+        send(res, 200, {
+          ok: true,
+          estimate,
+          bookingUrl: process.env.AUDIT_BOOKING_URL ?? null,
+          emailed,
+        });
+        return;
+      }
+
+      if (path === "/api/audit/leads" && method === "GET") {
+        const leads = await listAuditLeads();
+        send(res, 200, { leads: leads.slice(0, 200) });
+        return;
+      }
+
+      if (path === "/api/audit/leads.csv" && method === "GET") {
+        const leads = await listAuditLeads();
+        const esc = (s: string) => `"${s.replaceAll('"', '""')}"`;
+        const lines = [
+          "createdAt,name,email,company,trade,missedCallsPerWeek,averageTicket,listSize,annualAtStake,monthlyAtStake",
+          ...leads.map((l) =>
+            [
+              l.createdAt,
+              l.name,
+              l.email,
+              l.company,
+              l.trade,
+              l.input.missedCallsPerWeek,
+              l.input.averageTicket,
+              l.input.listSize,
+              l.result.annualAtStake,
+              l.result.monthlyAtStake,
+            ].map((v) => esc(String(v))).join(","),
+          ),
+        ];
+        res.writeHead(200, {
+          "content-type": "text/csv; charset=utf-8",
+          "content-disposition": 'attachment; filename="audit-leads.csv"',
+          "cache-control": "no-store",
+        });
+        res.end(lines.join("\n"));
         return;
       }
 

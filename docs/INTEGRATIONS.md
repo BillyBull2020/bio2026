@@ -201,7 +201,7 @@ SMTP/segment transport behind a delivery adapter — never as the campaign brain
 
 ## Test order
 
-1. `npm test` — 82 tests.
+1. `npm test` — 84 tests.
 2. `npm run selftest` — 11 end-to-end checks with mock providers.
 3. `GET /api/setup/status` — ten-item go-live checklist.
 4. One real SMS to your phone; reply STOP.

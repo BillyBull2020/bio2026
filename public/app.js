@@ -272,6 +272,29 @@ function renderOperatorFields() {
   }
 }
 
+async function loadAuditLeads() {
+  const el = $("#audit-list");
+  if (!el) return;
+  try {
+    const data = await api("/api/audit/leads");
+    const leads = data.leads ?? [];
+    if (!leads.length) {
+      el.innerHTML = `<div class="op-empty">No audit leads yet. Share <b>biodynamx.com/audit</b>.</div>`;
+      return;
+    }
+    el.innerHTML = leads.slice(0, 12).map((lead) => `
+      <div class="audit-card">
+        <b>${esc(lead.name)} · ${esc(lead.company || lead.trade)}</b>
+        <span>${esc(lead.email)} · ${esc(lead.trade)} · ${new Date(lead.createdAt).toLocaleDateString()}</span>
+        <div class="audit-value">$${Number(lead.result?.annualAtStake ?? 0).toLocaleString()}/yr at stake</div>
+        <span><a href="mailto:${encodeURIComponent(lead.email)}?subject=${encodeURIComponent("Your " + lead.trade + " revenue audit")}">Follow up →</a></span>
+      </div>
+    `).join("");
+  } catch (err) {
+    el.innerHTML = `<div class="op-empty">${esc(err.message)}</div>`;
+  }
+}
+
 async function loadOperatorTasks() {
   try {
     const data = await api("/api/operator/tasks");
